@@ -2,31 +2,61 @@ For Ubuntu
 ----------
 ****
 
-* Install python 2.x if needed
+### Initial installation ###
 
-> sudo apt-get install python-dev
+* Install pre-requisites (if not already installed): g++, cmake, make, and autoconf. Sample commands using apt-get are listed below. It is possible that these are already installed.
+
+> sudo apt-get install build-essential #this already includes g++
+
+> sudo apt-get install autoconf
+
+Note that "sudo apt-get install g++-<version>" can be used to install a specific version of the compiler. You can use "g++ --version" to check the version of g++ that is found by the system.
+
+* It's recommended to use Ubuntu 18.04 for now. Install python3 development environment.
+
+> sudo apt-get install python3-dev
 
 * Install boost_python if needed
 
 > sudo apt-get install libboost-python-dev
 
-* Go to the root folder of the repo.
+* Install pip
 
-> export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:bin/lib:third-party/lib
+> sudo apt-get install python3-pip
 
-> export PYTHONPATH=$PYTHONPATH:bin/lib
+* Install cmake (pip includes a later version of cmake)
 
-* Install python packages 
-
-* Make sure a recent version of pip is installed). See https://www.liquidweb.com/kb/how-to-install-pip-on-ubuntu-16-04-lts/ for instructions.
+> sudo pip3 install cmake --upgrade 
 
 > pip install seaborn
 
 > sudo apt-get install python-tk
 
-* Run the following commands
+* Install PALISADE. Run "make install" at the end.
 
-> make pywrapper
+* Clone the Python demo repo.
 
-> python src/wrappers/python/lsvm.py
+* Create the build directory
+
+> mkdir build
+
+> cd build
+
+
+### Demo build instructions (after the initial install) ###
+
+* In the build directory, run the following commands
+
+> cmake ..
+
+* If PALISADE is installed in a special director, specify it using -DPALISADE_DIR="path"
+
+> make
+
+* Go to the root folder of the repo and run the following commands
+
+> export PYTHONPATH=$(pwd)/build/lib:$PYTHONPATH
+
+> python3 python/lsvm.py
+
 
