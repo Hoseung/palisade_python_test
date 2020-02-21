@@ -47,7 +47,7 @@ Note that "sudo apt-get install g++-<version>" can be used to install a specific
 
 * In the build directory, run the following commands
 
-> cmake ..
+> cmake -DPALISADE_DIR=/usr/local ..
 
 * If PALISADE is installed in a special director, specify it using -DPALISADE_DIR="path"
 

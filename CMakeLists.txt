@@ -3,6 +3,9 @@ cmake_minimum_required (VERSION 3.5.1)
 project(demo C CXX)
 set(CMAKE_CXX_STANDARD 11)
 
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
 if(APPLE)
         set(OPENMP_LIBRARIES "/usr/local/opt/libomp/lib")
         set(OPENMP_INCLUDES "/usr/local/opt/libomp/include")
@@ -91,13 +94,15 @@ add_library (pythonobj OBJECT ${PYTHON_SRC_FILES})
 # add_dependencies(pythonobj PALISADEcore PALISADEpke PALISADEduality)
 set_property(TARGET pythonobj PROPERTY POSITION_INDEPENDENT_CODE 1)
 
-add_library (_pycrypto SHARED $<TARGET_OBJECTS:pythonobj>)
-set_property(TARGET _pycrypto PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set_property(TARGET _pycrypto PROPERTY PREFIX "")
-install(TARGETS _pycrypto DESTINATION lib)
+add_library (pycrypto SHARED $<TARGET_OBJECTS:pythonobj>)
+set_property(TARGET pycrypto PROPERTY VERSION 1)
+set_property(TARGET pycrypto PROPERTY SOVERSION 1)
+set_property(TARGET pycrypto PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/)
+set_property(TARGET pycrypto PROPERTY PREFIX "")
+install(TARGETS pycrypto DESTINATION lib)
 
-target_link_directories(_pycrypto PUBLIC ${PALISADE_DIR}/lib)
+target_link_directories(pycrypto PUBLIC ${PALISADE_DIR}/lib)
 
-target_link_libraries (_pycrypto PALISADEcore PALISADEpke PALISADEtrapdoor ${Python3_LIBRARIES} ${Boost_LIBRARIES}  ${THIRDPARTYLIBS} ${OpenMP_CXX_FLAGS})
+target_link_libraries (pycrypto PALISADEcore PALISADEpke PALISADEtrapdoor ${Python3_LIBRARIES} ${Boost_LIBRARIES}  ${THIRDPARTYLIBS} ${OpenMP_CXX_FLAGS})
 
 # python code ends

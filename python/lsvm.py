@@ -49,7 +49,7 @@ with open('demoData/lsvm-model.csv') as csv_file:
 
 feature_count = line_count - 2
 
-print "number of features: " + str(feature_count)
+print ("number of features: ",str(feature_count))
 
 N = feature_count + 1
 
@@ -65,7 +65,7 @@ with open('demoData/lsvm-input.csv') as csv_file:
 		x.append(xitem);
 		input_count += 1
 
-print "input size: " + str(input_count)
+print ("input size: ",str(input_count))
 
 # load the correct classification (for checking)
 with open('demoData/lsvm-check.csv') as csv_file:
@@ -78,21 +78,21 @@ with open('demoData/lsvm-check.csv') as csv_file:
 
 tbo = pycrypto.TBOLinear()
 
-tbo.Initialize(N, n, wmax, xmax);
+tbo.Initialize(N, n, wmax, xmax, N);
 
-print "\nInitialized the obfuscator."
+print ("\nInitialized the obfuscator.")
 
 tbo.KeyGen();
 
-print "Generated the secret keys."
+print ("Generated the secret keys.")
 
 betaInt = [int(round(item*10**prec)) for item in beta]
 
-print "weights vector: " + str(betaInt)
+print ("weights vector: ",str(betaInt))
 
 tbo.Obfuscate(betaInt)
 
-print "Obfuscated the program."
+print ("Obfuscated the program.")
 
 TT = 0
 FF = 0
@@ -120,11 +120,11 @@ for i in range(len(x)):
 	#result2 = tbo.EvaluateClear(query,betaInt)
 	#print "result in the clear: " + str(result2)
 
-print "\nConfusion Table"
-print "FF = " + str(float(FF)/float(len(x)))
-print "FT = " + str(float(FT)/float(len(x)))
-print "TF = " + str(float(TF)/float(len(x)))
-print "TT = " + str(float(TT)/float(len(x)))
+print ("\nConfusion Table")
+print ("FF = ",str(float(FF)/float(len(x))))
+print ("FT = ",str(float(FT)/float(len(x))))
+print ("TF = ",str(float(TF)/float(len(x))))
+print ("TT = ",str(float(TT)/float(len(x))))
 
 # graphical output of the confusion table
 
@@ -143,7 +143,7 @@ ax.set_title("Confusion Matrix for LSVM Prediction")
 
 plt.show()
 
-print "\nDemo completed"
+print ("\nDemo completed")
 
 #More sophisticated example from https://stackoverflow.com/questions/35572000/how-can-i-plot-a-confusion-matrix
 '''
