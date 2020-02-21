@@ -1,0 +1,116 @@
+#ifndef PYCRYPTO_WRAPPERS_CRYPTOINTERFACE_H
+#define PYCRYPTO_WRAPPERS_CRYPTOINTERFACE_H
+
+#define BOOST_PYTHON_STATIC_LIB //needed for Windows
+
+#include <vector>
+#include <set>
+
+#include <boost/python.hpp>
+
+#include <iostream>
+#include <fstream>
+
+#include "palisade.h"
+
+#include "cryptocontexthelper.h"
+
+#include "encoding/plaintext.h"
+
+#include "utils/debug.h"
+#include <random>
+
+#include "math/nbtheory.h"
+//#include "math/matrix.h"
+//#include "math/matrix.cpp"
+
+// number of primitive prime plaintext moduli in the CRT representation of plaintext
+const size_t SIZE = 1;
+
+namespace std {
+	template<typename T> ostream& operator<<(ostream& output, const vector<T>& vector) {
+
+		output << "[";
+
+		for (unsigned int i = 0; i < vector.size(); i++) {
+
+			if (i > 0) {
+				output << ", ";
+			}
+
+			output << (uint32_t)vector[i];
+		}
+
+		output << "]";
+		return output;
+	}
+}
+
+namespace pycrypto {
+
+	typedef vector<uint64_t> PlaintextInterfaceType;
+
+	class CiphertextInterfaceType {
+
+		public:
+
+			CiphertextInterfaceType();
+
+			CiphertextInterfaceType(lbcrypto::Ciphertext<lbcrypto::DCRTPoly> ciphertext);
+
+			~CiphertextInterfaceType();
+
+			const lbcrypto::CiphertextImpl<lbcrypto::DCRTPoly> &GetCiphertext() const;
+
+		private:
+
+			lbcrypto::Ciphertext<lbcrypto::DCRTPoly> m_ciphertext;
+			
+	};
+
+	class Crypto {
+
+		public:
+
+			Crypto();
+
+			void KeyGen();
+
+			//Used by boost::python
+			CiphertextInterfaceType* Encrypt(const boost::python::list& plaintext);
+
+			PlaintextInterfaceType Decrypt(const CiphertextInterfaceType& ciphertextInterface);
+
+			CiphertextInterfaceType* EvalAdd(const CiphertextInterfaceType& ciphertext1, const CiphertextInterfaceType& ciphertext2);
+
+			CiphertextInterfaceType* EvalAtIndex(const CiphertextInterfaceType& ciphertext, const usint i);
+
+			void SerializePublicKey(const string keyDir, const string keyId) const;
+			void DeserializePublicKey(const string keyDir, const string keyId);
+
+			void SerializePrivateKey(const string keyDir, const string keyId) const;
+			void DeserializePrivateKey(const string keyDir, const string keyId);
+
+			void SerializeCiphertext(const CiphertextInterfaceType &ciphertext, const string ciphertextDir, const string fileID) const;
+
+			CiphertextInterfaceType* DeserializeCiphertext(const string ciphertextDir, const string fileId);
+
+			void SerializeEvalKeys(const string keyDir, const string keyId) const;
+			void DeserializeEvalKeys(const string keyDir, const string keyId);
+
+		private:
+
+			std::vector<lbcrypto::CryptoContext<lbcrypto::DCRTPoly>> m_ccVector;
+
+			std::vector<lbcrypto::LPPublicKey<lbcrypto::DCRTPoly>> m_publicKeyVector;
+
+			std::vector<lbcrypto::LPPrivateKey<lbcrypto::DCRTPoly>> m_privateKeyVector;
+
+			std::vector<std::shared_ptr<std::map<usint, lbcrypto::LPEvalKey<lbcrypto::DCRTPoly>>>> m_evalKeyVector;
+
+			std::vector<usint> m_indices;
+
+	};
+}
+
+#endif

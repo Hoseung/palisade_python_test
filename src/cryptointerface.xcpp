@@ -1,0 +1,562 @@
+#include <sstream>
+#include <vector>
+
+#include "cryptointerface.h"
+
+
+using namespace std;
+using namespace lbcrypto;
+
+
+namespace pycrypto {
+
+	vector<uint64_t> pythonListToCppVector(const boost::python::list& pythonList) {
+
+		vector<uint64_t> cppVector;
+
+		for (unsigned int i = 0; i < len(pythonList); i++) {
+			cppVector.push_back(boost::python::extract<uint64_t>(pythonList[i]));
+		}
+
+		return cppVector;
+	}
+
+	CryptoContext<DCRTPoly> DeserializeContext(const string& ccFileName)
+	{
+
+		Serialized	ccSer;
+		if (SerializableHelper::ReadSerializationFromFile(ccFileName, &ccSer) == false) {
+			cerr << "Could not read the cryptocontext file" << endl;
+			return 0;
+		}
+
+		CryptoContext<DCRTPoly> cc = CryptoContextFactory<DCRTPoly>::DeserializeAndCreateContext(ccSer);
+
+		return cc;
+	}
+
+
+	std::vector<usint> GenerateIndices_2n(usint m) {
+
+		// stores automorphism indices needed for EvalSum
+		std::vector<usint> indices;
+
+		usint batchSize = m / 2;
+
+		usint g0 = 5;
+		usint g = 5;
+
+		for (size_t i = 0; i < batchSize/2; i++)
+		{
+			indices.push_back(g);
+			g = (g * g0) % m;
+		}
+
+		g = 3;
+		for (size_t i = batchSize / 2; i < batchSize-1; i++)
+		{
+			indices.push_back(g);
+			g = (g * g0) % m;
+		}
+
+		return indices;
+
+	}
+
+	CiphertextInterfaceType::CiphertextInterfaceType() {
+		m_ciphertext = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>());
+	}
+
+	CiphertextInterfaceType::CiphertextInterfaceType(Ciphertext<DCRTPoly> ciphertext) {
+		m_ciphertext = ciphertext;
+	}
+
+	CiphertextInterfaceType::~CiphertextInterfaceType() {
+	}
+
+	const CiphertextImpl<DCRTPoly> &CiphertextInterfaceType::GetCiphertext() const {
+		return *m_ciphertext;
+	}
+
+	void Crypto::SerializeCiphertext(const CiphertextInterfaceType &ciphertext, const string ciphertextDir, const string fileID) const {
+	
+		Serialized ctxtSer;
+		ctxtSer.SetObject();
+
+		//std::cout << "Serializing ciphertext...";
+
+		if (ciphertext.GetCiphertext().Serialize(&ctxtSer)) {
+			if (!SerializableHelper::WriteSerializationToFile(ctxtSer, ciphertextDir + "/" + fileID + "-ciphertext-" + std::to_string(0) + ".txt")) {
+				cerr << "Error writing serialization of ciphertext to "
+					<< ciphertextDir + "/" + fileID + "-ciphertext-" + std::to_string(0) + ".txt" << endl;
+				return;
+			}
+		}
+		else {
+			cerr << "Error serializing ciphertext" << endl;
+			return;
+		}
+
+		//std::cout << "Completed" << std::endl;
+
+	}
+
+	CiphertextInterfaceType* Crypto::DeserializeCiphertext(const string ciphertextDir, const string fileId) {
+
+		string fileName = ciphertextDir + "/" + fileId + "-ciphertext-" + std::to_string(0) + ".txt";
+
+		//std::cout << "Deserializing ciphertext...";
+
+		Serialized xSer;
+		if (SerializableHelper::ReadSerializationFromFile(fileName, &xSer) == false) {
+			cerr << "Could not read ciphertext" << endl;
+			return nullptr;
+		}
+
+		Ciphertext<DCRTPoly> ct = m_ccVector[0]->deserializeCiphertext(xSer);
+
+		if(!ct) {
+			cerr << "Could not deserialize ciphertext" << endl;
+			return nullptr;
+		}
+
+		//std::cout << "Completed" << std::endl;
+
+		return new CiphertextInterfaceType(ct);
+
+	}
+
+
+	//Default constructor
+	Crypto::Crypto() {
+	
+	}
+
+	//Default constructor
+	void Crypto::KeyGen() {
+
+		for (size_t k = 0; k < SIZE; k++) {
+
+			size_t batchSize = 1024;
+
+			usint init_size = 1;
+			usint dcrtBits = 55;
+			//usint dcrtBitsBig = 57;
+
+			usint m;
+			usint p;
+
+			switch (k) {
+			case 0:
+				m = 2048;
+				p = 40961;
+				break;
+			case 1:
+				m = 2048;
+				p = 59393;
+				break;
+			case 2:
+				m = 2048;
+				p = 12289;
+				break;
+			case 3:
+				m = 2048;
+				p = 18433;
+				break;
+			}
+
+			BigInteger modulusP(p);
+
+			//std::cout << "\nCRYPTOCONTEXT " << k << " KEY GENERATION FOR p = " << p << "\n" << std::endl;
+
+			// populate the towers for the small modulus
+
+			vector<NativeInteger> init_moduli(init_size);
+			vector<NativeInteger> init_rootsOfUnity(init_size);
+
+			NativeInteger q = FirstPrime<NativeInteger>(dcrtBits, m);
+			init_moduli[0] = q;
+			init_rootsOfUnity[0] = RootOfUnity(m, init_moduli[0]);
+
+			for (usint i = 1; i < init_size; i++) {
+				q = lbcrypto::NextPrime(q, m);
+				init_moduli[i] = q;
+				init_rootsOfUnity[i] = RootOfUnity(m, init_moduli[i]);
+			}
+
+			shared_ptr<ILDCRTParams<BigInteger>> paramsDCRT(new ILDCRTParams<BigInteger>(m, init_moduli, init_rootsOfUnity));
+
+			EncodingParams encodingParams(new EncodingParamsImpl(p));
+
+			PackedEncoding::SetParams(m, encodingParams);
+			encodingParams->SetBatchSize(batchSize);
+
+			float stdDev = 4;
+
+			CryptoContext<DCRTPoly> cc =
+				CryptoContextFactory<DCRTPoly>::genCryptoContextBGV(paramsDCRT, encodingParams, 20, stdDev);
+
+			cc->Enable(ENCRYPTION);
+			cc->Enable(SHE);
+
+			////////////////////////////////////////////////////////////
+			// Key Generation and Serialization
+			////////////////////////////////////////////////////////////
+
+			std::cout << "Generating public and private keys...";
+			LPKeyPair<DCRTPoly> kp = cc->KeyGen();
+
+			std::cout << "Completed" << std::endl;
+
+			// EvalSumKey
+
+			std::cout << "Generating evaluation keys...";
+
+			m_indices = GenerateIndices_2n(m);
+
+			shared_ptr<std::map<usint, LPEvalKey<DCRTPoly>>> map = cc->EvalAutomorphismKeyGen(kp.secretKey, m_indices);
+
+			//std::vector<shared_ptr<lbcrypto::LPEvalKey<lbcrypto::DCRTPoly>>> evalKeyVector;
+
+			//for (auto const &ent : *map) {
+			//	evalKeyVector.push_back(ent.second);
+			//}
+
+			std::cout << "Completed" << std::endl;
+
+			m_publicKeyVector.push_back(kp.publicKey);
+
+			m_privateKeyVector.push_back(kp.secretKey);
+
+			m_evalKeyVector.push_back(map);
+
+			m_ccVector.push_back(cc);
+
+		}
+
+	}
+
+	CiphertextInterfaceType* Crypto::Encrypt(const boost::python::list &plaintext) {
+
+		////////////////////////////////////////////////////////////
+		//Encryption
+		////////////////////////////////////////////////////////////
+
+		//std::cout << "\n" << "Running encryption...";
+
+		std::vector<uint64_t> ptxtVector = pythonListToCppVector(plaintext);
+
+		Plaintext ptxt(m_ccVector[0]->MakePackedPlaintext(ptxtVector));
+
+		Ciphertext<DCRTPoly> ciphertextVector = m_ccVector[0]->Encrypt(m_publicKeyVector[0], ptxt);
+
+		//std::cout << "Completed" << std::endl;
+
+		return new CiphertextInterfaceType(ciphertextVector);
+
+	}
+
+	PlaintextInterfaceType Crypto::Decrypt(const CiphertextInterfaceType &ciphertextInterface) {
+
+		////////////////////////////////////////////////////////////
+		//Decryption
+		////////////////////////////////////////////////////////////
+
+		//std::cout <<"\n"<< "Running decryption...";
+
+		const CiphertextImpl<DCRTPoly> &ct = ciphertextInterface.GetCiphertext();
+
+		Ciphertext<DCRTPoly> ciphertext(new CiphertextImpl<DCRTPoly>(ct));
+
+		Plaintext plaintext;
+		
+		// now decrypt iPlaintext
+		m_ccVector[0]->Decrypt(m_privateKeyVector[0], ciphertext, &plaintext);
+
+		//std::cout << "Completed" << std::endl;
+
+		return plaintext->GetPackedValue();
+
+	}
+
+	CiphertextInterfaceType* Crypto::EvalAdd(const CiphertextInterfaceType &ciphertext1, const CiphertextInterfaceType &ciphertext2)
+	{
+
+		//std::cout << "\n" << "Running addition...";
+
+		auto cipher1 = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>(ciphertext1.GetCiphertext()));
+		auto cipher2 = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>(ciphertext2.GetCiphertext()));
+
+		auto cipherAdd = m_ccVector[0]->EvalAdd(cipher1, cipher2);
+
+		//std::cout << "Completed" << std::endl;
+
+		return new CiphertextInterfaceType(cipherAdd);
+
+	}
+
+	CiphertextInterfaceType* Crypto::EvalAtIndex(const CiphertextInterfaceType& ciphertext, const usint i)
+	{
+		auto cipher = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>(ciphertext.GetCiphertext()));
+
+		auto cipherAtIndex = m_ccVector[0]->EvalAutomorphism(cipher, m_indices[i-2], *m_evalKeyVector[0]);
+
+		return new CiphertextInterfaceType(cipherAtIndex);
+	}
+
+	void Crypto::SerializePublicKey(const string keyDir, const string keyfileName) const
+	{
+
+		std::cout << "Serializing public key...";
+
+		for (size_t k = 0; k < SIZE; k++) {
+
+			//Serializable::DisableKeysInSerializedContext();
+
+			const lbcrypto::LPPublicKey<lbcrypto::DCRTPoly> &pk = m_publicKeyVector[k];			
+
+	      		if(pk) {
+
+				Serialized pubK;
+
+				if(pk->Serialize(&pubK)) {
+					if(!SerializableHelper::WriteSerializationToFile(pubK, keyDir+"/"+keyfileName+"-public-" + std::to_string(k) + ".txt")) {
+						cerr << "Error writing serialization of public key to "
+						 << keyDir+"/"+keyfileName+"-public-" + std::to_string(k) + ".txt" << endl;
+						return;
+					}
+				} else {
+					cerr << "Error serializing public key" << endl;
+					return;
+				}
+
+			}
+
+		}
+
+		std::cout << "Completed" << std::endl;
+
+
+	}
+
+	void Crypto::SerializeEvalKeys(const string keyDir, const string keyfileName) const
+	{
+
+		std::cout << "Serializing evaluation keys...";
+
+		for (size_t k = 0; k < SIZE; k++) {
+
+			//Serializable::DisableKeysInSerializedContext();
+
+			const shared_ptr<std::map<usint, lbcrypto::LPEvalKey<lbcrypto::DCRTPoly>>> &ek = m_evalKeyVector[k];
+
+			for (auto const &ent : *ek) {
+				Serialized eK;
+
+				if (ent.second->Serialize(&eK)) {
+					if (!SerializableHelper::WriteSerializationToFile(eK, keyDir + "/" + keyfileName + "-evalkey-" + std::to_string(ent.first) + "-" + std::to_string(k) + ".txt")) {
+						cerr << "Error writing serialization of eval key to "
+							<< keyDir + "/" + keyfileName + "-evalkey-" + std::to_string(ent.first) + "-" + std::to_string(k) + ".txt" << endl;
+						return;
+					}
+				}
+				else {
+					cerr << "Error serializing evaluation key" << endl;
+					return;
+				}
+
+			}
+
+		}
+
+		std::cout << "Completed" << std::endl;
+
+	}
+
+
+	void Crypto::DeserializePublicKey(const string keyDir, const string keyfileName) {
+
+		std::cout << "Deserializing the public key...";
+
+			for (size_t k = 0; k < SIZE; k++) {
+
+				string pkFileName = keyDir+"/"+keyfileName+"-public-" + std::to_string(k) + ".txt";
+
+				if (m_ccVector.size() < SIZE) {
+					CryptoContext<DCRTPoly> cc = DeserializeContext(pkFileName);
+					m_ccVector.push_back(cc);
+				}
+				
+
+				Serialized pkSer;
+				if(SerializableHelper::ReadSerializationFromFile(pkFileName, &pkSer) == false) {
+					cerr << "Could not read public key" << endl;
+					return;
+				}
+
+				LPPublicKey<DCRTPoly> pk = m_ccVector[k]->deserializePublicKey(pkSer);
+
+				if(!pk) {
+					cerr << "Could not deserialize public key" << endl;
+					return;
+				}
+
+				if (m_publicKeyVector.size() < SIZE)
+					m_publicKeyVector.push_back(pk);
+				else
+					m_publicKeyVector[k] = pk;
+
+			}
+
+		std::cout << "Completed" << std::endl;
+
+	}
+
+	void Crypto::DeserializeEvalKeys(const string keyDir, const string keyfileName) {
+
+		std::cout << "Deserializing the evaluation keys...";
+
+		string ccFileName = keyDir + "/" + keyfileName + "-evalkey-" + std::to_string(3) + "-" + std::to_string(0) + ".txt";
+
+		if (m_ccVector.size() < 1) {
+			CryptoContext<DCRTPoly> cc = DeserializeContext(ccFileName);
+			m_ccVector.push_back(cc);
+		}
+
+		m_indices = GenerateIndices_2n(m_ccVector[0]->GetCyclotomicOrder());
+
+		for (size_t k = 0; k < SIZE; k++) {
+
+			shared_ptr<std::map<usint, LPEvalKey<DCRTPoly>>> ekMap(new std::map<usint, LPEvalKey<DCRTPoly>>());
+
+			for (size_t i = 0; i < m_ccVector[k]->GetRingDimension() - 1; i++) {
+
+				string ekFileName = keyDir + "/" + keyfileName + "-evalkey-" + std::to_string(m_indices[i]) + "-" + std::to_string(k) + ".txt";
+				
+				Serialized pkSer;
+				if (SerializableHelper::ReadSerializationFromFile(ekFileName, &pkSer) == false) {
+					cerr << "Could not read evaluation key" << endl;
+					return;
+				}
+
+				lbcrypto::LPEvalKey<lbcrypto::DCRTPoly> ek = m_ccVector[k]->deserializeEvalKey(pkSer);
+
+				if (!ek) {
+					cerr << "Could not deserialize evaluation key" << endl;
+					return;
+				}
+
+				(*ekMap)[m_indices[i]] = ek;
+
+			}
+
+			if (m_evalKeyVector.size() < SIZE)
+				m_evalKeyVector.push_back(ekMap);
+			else
+				m_evalKeyVector[k] = ekMap;
+
+		}
+
+		std::cout << "Completed" << std::endl;
+
+	}
+
+	void Crypto::SerializePrivateKey(const string keyDir, const string keyfileName) const
+	{
+
+		std::cout << "Serializing private key...";
+
+		for (size_t k = 0; k < SIZE; k++) {
+
+			//Serializable::DisableKeysInSerializedContext();
+
+			const lbcrypto::LPPrivateKey<lbcrypto::DCRTPoly> &sk = m_privateKeyVector[k];			
+
+	      		if(sk) {
+
+				Serialized privK;
+
+				if(sk->Serialize(&privK)) {
+					if(!SerializableHelper::WriteSerializationToFile(privK, keyDir+"/"+keyfileName+"-private-" + std::to_string(k) + ".txt")) {
+						cerr << "Error writing serialization of private key to "
+						 << keyDir+"/"+keyfileName+"-private-" + std::to_string(k) + ".txt" << endl;
+						return;
+					}
+				} else {
+					cerr << "Error serializing private key" << endl;
+					return;
+				}
+
+			}
+
+		}
+
+		std::cout << "Completed" << std::endl;
+
+
+	}
+
+	void Crypto::DeserializePrivateKey(const string keyDir, const string keyfileName) {
+
+		std::cout << "Deserializing the private key...";
+
+			for (size_t k = 0; k < SIZE; k++) {
+
+				string skFileName = keyDir+"/"+keyfileName+"-private-" + std::to_string(k) + ".txt";
+
+				if (m_ccVector.size() < SIZE) {
+					CryptoContext<DCRTPoly> cc = DeserializeContext(skFileName);
+					m_ccVector.push_back(cc);
+				}
+				
+
+				Serialized skSer;
+				if(SerializableHelper::ReadSerializationFromFile(skFileName, &skSer) == false) {
+					cerr << "Could not read secret key" << endl;
+					return;
+				}
+
+				LPPrivateKey<DCRTPoly> sk = m_ccVector[k]->deserializeSecretKey(skSer);
+
+				if(!sk) {
+					cerr << "Could not deserialize private key" << endl;
+					return;
+				}
+
+				if (m_privateKeyVector.size() < SIZE)
+					m_privateKeyVector.push_back(sk);
+				else
+					m_privateKeyVector[k] = sk;
+
+			}
+
+		std::cout << "Completed" << std::endl;
+
+	}
+
+
+	//std::string Crypto::serializeEvalKey(usint index) const
+	//{
+	//	
+	//	string jsonString= "";
+	//	SerializableHelper jsonHelper;
+
+	//	unordered_map <string, unordered_map <string, string>> testMap;
+	//	testMap = m_evalKeys[index]->Serialize(testMap, "Pre");
+	//	jsonString = jsonHelper.GetJsonString(testMap);
+
+	//	return jsonString;
+
+	//}
+
+	//void Crypto::deserializeEvalKey(const std::string& serialiazedString, usint index) {
+
+	//	unordered_map <string, unordered_map <string, string>> testMap;
+	//	SerializableHelper jsonHelper;
+	//	testMap = jsonHelper.GetSerializationMap(serialiazedString.c_str());
+
+	//	m_evalKeys[index]->Deserialize(testMap);
+
+	//}
+
+}

@@ -1,0 +1,69 @@
+﻿//PYTHON WRAPPER
+#define BOOST_PYTHON_STATIC_LIB //needed for Windows
+
+#include <boost/python.hpp>
+
+#include "conjinterface.h"
+#include "cryptointerface.h"
+
+using namespace std;
+using namespace boost::python;
+
+template <typename T> class cppVectorToPythonList {
+
+public:
+
+	static PyObject* convert(const vector<T>& vector) {
+
+		boost::python::list* pythonList = new boost::python::list();
+
+		for (unsigned int i = 0; i < vector.size(); i++) {
+			pythonList->append(vector[i]);
+		}
+
+		return pythonList->ptr();
+	}
+};
+
+BOOST_PYTHON_MODULE(pycrypto) {
+
+	// Whenever a vector<int> is returned by a function, it will automatically be converted to a Python list.
+	to_python_converter<vector<uint64_t>, cppVectorToPythonList<uint64_t> >();
+
+	// no_init tells boost.python that Ciphertext's constructor shouldn't be accessed by the Python interface.
+	// Whenever a pointer is returned, a return_value_policy<manage_new_object>() is specified to tell Python that it should
+	// take responsibility over the object and delete it when not used anymore (to avoid memory leaks). If no return_value_policy
+	// is specified, a compilation error will occur.
+	// staticmethod is important to specify when a static method is involved, or else a compilation error will occur.
+	class_<pycrypto::CiphertextInterfaceType>("Ciphertext");
+
+	// class_<pycrypto::PlaintextInterfaceType>("Plaintext")
+	//	.def("toInt32", &pycrypto::PlaintextInterfaceType::ToInt32);
+
+	class_<pycrypto::Crypto>("Crypto")
+		.def("KeyGen", &pycrypto::Crypto::KeyGen)
+		.def("Encrypt", &pycrypto::Crypto::Encrypt, return_value_policy<manage_new_object>())
+		.def("Decrypt", &pycrypto::Crypto::Decrypt)
+		.def("EvalAdd", &pycrypto::Crypto::EvalAdd, return_value_policy<manage_new_object>())
+		.def("EvalAtIndex", &pycrypto::Crypto::EvalAtIndex, return_value_policy<manage_new_object>())
+		.def("SerializePublicKey", &pycrypto::Crypto::SerializePublicKey)
+		.def("DeserializePublicKey", &pycrypto::Crypto::DeserializePublicKey)
+		.def("SerializePrivateKey", &pycrypto::Crypto::SerializePrivateKey)
+		.def("DeserializePrivateKey", &pycrypto::Crypto::DeserializePrivateKey)
+		.def("SerializeCiphertext", &pycrypto::Crypto::SerializeCiphertext)
+		.def("DeserializeCiphertext", &pycrypto::Crypto::DeserializeCiphertext, return_value_policy<manage_new_object>())
+		.def("SerializeEvalKeys", &pycrypto::Crypto::SerializeEvalKeys)
+		.def("DeserializeEvalKeys", &pycrypto::Crypto::DeserializeEvalKeys);
+
+	// no_init tells boost.python that Ciphertext's constructor shouldn't be accessed by the Python interface.
+	// Whenever a pointer is returned, a return_value_policy<manage_new_object>() is specified to tell Python that it should
+	// take responsibility over the object and delete it when not used anymore (to avoid memory leaks). If no return_value_policy
+	// is specified, a compilation error will occur.
+	// staticmethod is important to specify when a static method is involved, or else a compilation error will occur.
+	class_<pycrypto::Obfuscator>("Obfuscator")
+		.def("Initialize", &pycrypto::Obfuscator::Initialize)
+		.def("Evaluate", &pycrypto::Obfuscator::Evaluate)
+		.def("EvaluateClear", &pycrypto::Obfuscator::EvaluateClear);
+
+
+}
