@@ -1,2 +1,5 @@
 # Ignore everything in this directory
 build/
+/.cproject
+/.project
+/.pydevproject
