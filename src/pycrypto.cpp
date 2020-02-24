@@ -1,52 +1,41 @@
-﻿//PYTHON WRAPPER
+﻿
 #define BOOST_PYTHON_STATIC_LIB //needed for Windows
 
+#include <vector>
+#include <complex>
 #include <boost/python.hpp>
 
-#include "tbolininterface.h"
+#include "ckks_wrapper.h"
 
 using namespace std;
 using namespace boost::python;
 
-template <typename T> class cppVectorToPythonList {
-
+class cppVectorToPythonList {
 public:
 
-	static PyObject* convert(const vector<T>& vector) {
-
+	static PyObject* convert(const vector<complex<double>>& vector) {
 		boost::python::list* pythonList = new boost::python::list();
 
 		for (unsigned int i = 0; i < vector.size(); i++) {
-			pythonList->append(vector[i]);
+			pythonList->append(vector[i].real());
 		}
-
 		return pythonList->ptr();
 	}
+
 };
 
 BOOST_PYTHON_MODULE(pycrypto) {
 
-	// Whenever a vector<int> is returned by a function, it will automatically be converted to a Python list.
-	to_python_converter<vector<int64_t>, cppVectorToPythonList<int64_t> >();
-	to_python_converter<vector<double>, cppVectorToPythonList<double> >();
+	to_python_converter<vector<complex<double>>, cppVectorToPythonList>();
 
-    // no_init tells boost.python that Ciphertext's constructor shouldn't be accessed by the Python interface.
-    // Whenever a pointer is returned, a return_value_policy<manage_new_object>() is specified to tell Python that it should
-    // take responsibility over the object and delete it when not used anymore (to avoid memory leaks). If no return_value_policy
-    // is specified, a compilation error will occur.
-    // staticmethod is important to specify when a static method is involved, or else a compilation error will occur.
-	class_<pycrypto::TBOLinear >("TBOLinear")
-		.def("Initialize", &pycrypto::TBOLinear::Initialize)
-		.def("KeyGen", &pycrypto::TBOLinear::KeyGen)
-		.def("TokenGen", &pycrypto::TBOLinear::TokenGen)
-		.def("Obfuscate", &pycrypto::TBOLinear::Obfuscate)
-		.def("Evaluate", &pycrypto::TBOLinear::Evaluate)
-		.def("EvaluateClear", &pycrypto::TBOLinear::EvaluateClear);
+	class_<pycrypto::CiphertextInterfaceType>("Ciphertext");
+
+	class_<pycrypto::Crypto>("Crypto")
+		.def("KeyGen", &pycrypto::Crypto::KeyGen)
+		.def("Encrypt", &pycrypto::Crypto::Encrypt, return_value_policy<manage_new_object>())
+		.def("Decrypt", &pycrypto::Crypto::Decrypt)
+		.def("EvalAdd", &pycrypto::Crypto::EvalAdd, return_value_policy<manage_new_object>())
+		.def("EvalMult", &pycrypto::Crypto::EvalMult, return_value_policy<manage_new_object>())
+		.def("EvalSum", &pycrypto::Crypto::EvalSum, return_value_policy<manage_new_object>());
 
 }
-
-
-
-
-
-

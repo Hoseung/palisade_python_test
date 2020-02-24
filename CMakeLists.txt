@@ -66,8 +66,8 @@ endif()
 if(APPLE AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         set(IGNORE_WARNINGS "${IGNORE_WARNINGS} -Wno-unused-private-field -Wno-shift-op-parentheses")
 endif()
-
-set(COMPILEFLAGS "-Wall -Werror -O3 -DPALISADE_VERSION=${PALISADE_VERSION} ${IGNORE_WARNINGS}")
+#-Werror 
+set(COMPILEFLAGS "-Wall -O3 -DPALISADE_VERSION=${PALISADE_VERSION} ${IGNORE_WARNINGS} -Wno-deprecated-declarations")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMPILEFLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMPILEFLAGS}")
 
