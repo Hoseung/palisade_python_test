@@ -24,22 +24,24 @@ def next_power_of_2(x):
 
 sign = lambda x: (1, -1)[x < 0]
 
-with open('demoData/lsvm-model.csv') as csv_file:
+def read_model_data(model_csv):
+    csv_file = open(model_csv)
     csv_reader = csv.reader(csv_file, delimiter=',')
-    line_count = 0
+    feature_count = 0
     beta = []
     for row in csv_reader:
-        if line_count == 0:
+        if feature_count == 0:
             s = float(row[0])
         else:
             beta.append(float(row[0]))
-        line_count += 1
-
-feature_count = line_count - 2
-
-N = feature_count + 1
-
-with open('demoData/lsvm-input.csv') as csv_file:
+        feature_count += 1
+    feature_count = feature_count - 2
+    bias = beta[feature_count:(feature_count+1)]
+    beta = beta[0:feature_count]
+    return beta, bias, s, feature_count
+    
+def read_input_data(input_csv):
+    csv_file = open(input_csv)
     csv_reader = csv.reader(csv_file, delimiter=',')
     input_count = 0
     x = []
@@ -49,60 +51,111 @@ with open('demoData/lsvm-input.csv') as csv_file:
             xitem.append(float(column))
         x.append(xitem);
         input_count += 1
+    return x, input_count
 
-print ("input size: ",str(input_count))
-
-# load the correct classification (for checking)
-with open('demoData/lsvm-check.csv') as csv_file:
+def read_check_data(check_csv):        
+    csv_file = open(check_csv)
     csv_reader = csv.reader(csv_file, delimiter=',')
     check_count = 0
     check = []
     for row in csv_reader:
         check.append(float(row[0]));
         check_count += 1
+    return check, check_count
 
+def lsvm_plain_beta_plain_input(beta, bias, x):
+    res = []
+    for i in range(len(x)):
+        betaxi = [a*b for a,b in zip(beta,x[i])]
+        ip = sum(betaxi)
+        ip = ip + bias[0]
+        res.append(ip)
+    return res    
+
+def enc_input(ckks_wrapper, x):
+    enc_x = []
+    for i in range(len(x)):
+        enc_x.append(ckks_wrapper.Encrypt(x[i]))
+    return enc_x
+
+def lsvm_enc_beta_plain_input(ckks_wrapper, enc_beta, enc_bias, x):
+    res = []
+    for i in range(len(x)):
+        enc_betaxi = ckks_wrapper.EvalMultConst(enc_beta, x[i])
+        enc_ip = ckks_wrapper.EvalSum(enc_betaxi, next_power_of_2(feature_count))
+        enc_svm = ckks_wrapper.EvalAdd(enc_ip, enc_bias)
+        
+        dec_svm = ckks_wrapper.Decrypt(enc_svm)
+        #dec_svm = [round(v) for v in dec_svm]
+        res.append(dec_svm[0])
+    return res
+
+def lsvm_enc_beta_enc_input(ckks_wrapper, enc_beta, enc_bias, enc_x):
+    res = []
+    for i in range(len(enc_x)):          
+        enc_betaxi = ckks_wrapper.EvalMult(enc_beta, enc_x[i])
+        enc_ip = ckks_wrapper.EvalSum(enc_betaxi, next_power_of_2(feature_count))
+        enc_svm = ckks_wrapper.EvalAdd(enc_ip, enc_bias)
+        
+        dec_svm = ckks_wrapper.Decrypt(enc_svm)
+        #dec_svm = [round(v) for v in dec_svm]
+        res.append(dec_svm[0])
+    return res
+
+def confusion_table(res, check): 
+    TT = 0
+    FF = 0
+    TF = 0
+    FT = 0
+    for i in range(len(res)):
+        if sign(res[i])==check[i]:
+            #print str(sign(result1)) + ": CORRECT"
+            if sign(res[i])==1:
+                TT += 1
+            else:
+                FF += 1
+        else:
+            #print str(sign(result1)) + ": INCORRECT"
+            if sign(res[i])==1:
+                FT += 1
+            else:
+                TF += 1
+    return TT, FF, TF, FT    
+
+beta, bias, s, feature_count = read_model_data('demoData/lsvm-model.csv')
+print("feature_count:", feature_count)
+
+x, input_count = read_input_data('demoData/lsvm-input.csv')
+print("input_count:", input_count)
+
+check, check_count = read_check_data('demoData/lsvm-check.csv')
+print("check_count:", check_count)
 
 max_depth = 1
 scale_factor = 50
-batch_size = 512;
+batch_size = 512
 
 ckks_wrapper = pycrypto.Crypto()
 ckks_wrapper.KeyGen(max_depth, scale_factor, batch_size)
 
-enc_beta = ckks_wrapper.Encrypt(beta[0:feature_count])
-enc_bias = ckks_wrapper.Encrypt(beta[feature_count:(feature_count+1)])
+print("keys generated")
 
-# dec_beta = ckks_wrapper.Decrypt(enc_beta)
-# dec_beta = [round(v) for v in dec_beta]
-# print(dec_beta)
+enc_beta = ckks_wrapper.Encrypt(beta)
+enc_bias = ckks_wrapper.Encrypt(bias)
 
-TT = 0
-FF = 0
-TF = 0
-FT = 0
+print("beta and bias encrypted")
 
-for i in range(len(x)):
-    print(i)
-    enc_x = ckks_wrapper.Encrypt(x[i])
-    enc_betaxi = ckks_wrapper.EvalMult(enc_beta, enc_x)
-    enc_ip = ckks_wrapper.EvalSum(enc_betaxi, next_power_of_2(feature_count))
-    enc_svm = ckks_wrapper.EvalAdd(enc_ip, enc_bias)
-    dec_svm = ckks_wrapper.Decrypt(enc_svm)
-    #dec_svm = [round(v) for v in dec_svm]
+plain_res = lsvm_plain_beta_plain_input(beta, bias, x)
+#print(plain_res[0:10])
 
-    if sign(dec_svm[0])==check[i]:
-        #print str(sign(result1)) + ": CORRECT"
-        if sign(dec_svm[0])==1:
-            TT += 1
-        else:
-            FF += 1
-    else:
-        #print str(sign(result1)) + ": INCORRECT"
-        if sign(dec_svm[0])==1:
-            FT += 1
-        else:
-            TF += 1
-            
+enc_res = lsvm_enc_beta_plain_input(ckks_wrapper, enc_beta, enc_bias, x)
+#print(enc_res[0:10])
+
+enc_x = enc_input(ckks_wrapper, x)
+enc_res2 = lsvm_enc_beta_enc_input(ckks_wrapper, enc_beta, enc_bias, enc_x)
+#print(enc_res2[0:10])
+
+TT, FF, TF, FT = confusion_table(enc_res2, check)
 
 print ("\nConfusion Table")
 print ("FF = ",str(float(FF)/float(len(x))))
@@ -128,19 +181,4 @@ ax.set_title("Confusion Matrix for LSVM Prediction")
 plt.show()
 
 print ("\nDemo completed")
-
-#More sophisticated example from https://stackoverflow.com/questions/35572000/how-can-i-plot-a-confusion-matrix
-'''
-array = [[13,1,1,0,2,0],
-     [3,9,6,0,1,0],
-     [0,0,16,2,0,0],
-     [0,0,0,13,0,0],
-     [0,0,0,0,15,0],
-     [0,0,1,0,0,15]]        
-df_cm = pd.DataFrame(array, range(6),
-                  range(6))
-#plt.figure(figsize = (10,7))
-sn.set(font_scale=1.4)#for label size
-sn.heatmap(df_cm, annot=True,annot_kws={"size": 16})# font size
-'''
 

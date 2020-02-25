@@ -36,6 +36,7 @@ BOOST_PYTHON_MODULE(pycrypto) {
 		.def("Decrypt", &pycrypto::Crypto::Decrypt)
 		.def("EvalAdd", &pycrypto::Crypto::EvalAdd, return_value_policy<manage_new_object>())
 		.def("EvalMult", &pycrypto::Crypto::EvalMult, return_value_policy<manage_new_object>())
+		.def("EvalMultConst", &pycrypto::Crypto::EvalMultConst, return_value_policy<manage_new_object>())
 		.def("EvalSum", &pycrypto::Crypto::EvalSum, return_value_policy<manage_new_object>());
 
 }

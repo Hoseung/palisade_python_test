@@ -84,6 +84,16 @@ CiphertextInterfaceType* Crypto::EvalMult(
 	return new CiphertextInterfaceType(cipherMult);
 }
 
+CiphertextInterfaceType* Crypto::EvalMultConst(
+		const CiphertextInterfaceType &ciphertext1,
+		const boost::python::list &pylist) {
+	auto cipher1 = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>(ciphertext1.GetCiphertext()));
+	vector<complex<double>> vals = pythonListToCppVector(pylist);
+	Plaintext plain2 = m_cc->MakeCKKSPackedPlaintext(vals);
+	auto cipherMult = m_cc->EvalMult(cipher1, plain2);
+	return new CiphertextInterfaceType(cipherMult);
+}
+
 CiphertextInterfaceType* Crypto::EvalSum(
 		const CiphertextInterfaceType &ciphertext,
 		usint batch_size) {

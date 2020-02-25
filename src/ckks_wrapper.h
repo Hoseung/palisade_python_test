@@ -52,6 +52,8 @@ public:
 
 	CiphertextInterfaceType* EvalMult(const CiphertextInterfaceType &ciphertext1, const CiphertextInterfaceType &ciphertext2);
 
+	CiphertextInterfaceType* EvalMultConst(const CiphertextInterfaceType &ciphertext1, const boost::python::list &pylist);
+
 	CiphertextInterfaceType* EvalSum(const CiphertextInterfaceType &ciphertext1, usint batch_size);
 
 private:
