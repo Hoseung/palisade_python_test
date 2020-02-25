@@ -14,6 +14,7 @@
 
 
 import pycrypto
+import random
 import csv
 import seaborn as sn
 import pandas as pd
@@ -63,24 +64,30 @@ def read_check_data(check_csv):
         check_count += 1
     return check, check_count
 
-def lsvm_plain_beta_plain_input(beta, bias, x):
+def shuffle_data(x, check):
+    c = list(zip(x, check))
+    random.shuffle(c)
+    x, check = zip(*c)
+    return x, check
+    
+def lsvm_plain_beta_plain_input(beta, bias, x, num):
     res = []
-    for i in range(len(x)):
+    for i in range(num):
         betaxi = [a*b for a,b in zip(beta,x[i])]
         ip = sum(betaxi)
         ip = ip + bias[0]
         res.append(ip)
     return res    
 
-def enc_input(ckks_wrapper, x):
+def enc_input(ckks_wrapper, x, num):
     enc_x = []
-    for i in range(len(x)):
+    for i in range(num):
         enc_x.append(ckks_wrapper.Encrypt(x[i]))
     return enc_x
 
-def lsvm_enc_beta_plain_input(ckks_wrapper, enc_beta, enc_bias, x):
+def lsvm_enc_beta_plain_input(ckks_wrapper, enc_beta, enc_bias, x, num):
     res = []
-    for i in range(len(x)):
+    for i in range(num):
         enc_betaxi = ckks_wrapper.EvalMultConst(enc_beta, x[i])
         enc_ip = ckks_wrapper.EvalSum(enc_betaxi, next_power_of_2(feature_count))
         enc_svm = ckks_wrapper.EvalAdd(enc_ip, enc_bias)
@@ -90,9 +97,9 @@ def lsvm_enc_beta_plain_input(ckks_wrapper, enc_beta, enc_bias, x):
         res.append(dec_svm[0])
     return res
 
-def lsvm_enc_beta_enc_input(ckks_wrapper, enc_beta, enc_bias, enc_x):
+def lsvm_enc_beta_enc_input(ckks_wrapper, enc_beta, enc_bias, enc_x, num):
     res = []
-    for i in range(len(enc_x)):          
+    for i in range(num):          
         enc_betaxi = ckks_wrapper.EvalMult(enc_beta, enc_x[i])
         enc_ip = ckks_wrapper.EvalSum(enc_betaxi, next_power_of_2(feature_count))
         enc_svm = ckks_wrapper.EvalAdd(enc_ip, enc_bias)
@@ -122,14 +129,28 @@ def confusion_table(res, check):
                 TF += 1
     return TT, FF, TF, FT    
 
-beta, bias, s, feature_count = read_model_data('demoData/lsvm-model.csv')
+#beta, bias, s, feature_count = read_model_data('demoData/lsvm-model.csv')
+#x, input_count = read_input_data('demoData/lsvm-input.csv')
+#check, check_count = read_check_data('demoData/lsvm-check.csv')
+
+beta, bias, s, feature_count = read_model_data('demoData/lsvm-credit-model.csv')
+x, input_count = read_input_data('demoData/lsvm-credit-input.csv')
+check, check_count = read_check_data('demoData/lsvm-credit-check.csv')
+
+#beta, bias, s, feature_count = read_model_data('demoData/lsvm-ion-model.csv')
+#x, input_count = read_input_data('demoData/lsvm-ion-input.csv')
+#check, check_count = read_check_data('demoData/lsvm-ion-check.csv')
+
+#beta, bias, s, feature_count = read_model_data('demoData/lsvm-ovarian-model.csv')
+#x, input_count = read_input_data('demoData/lsvm-ovarian-input.csv')
+#check, check_count = read_check_data('demoData/lsvm-ovarian-check.csv')
+
+shuffle_data(x, check)
+
 print("feature_count:", feature_count)
-
-x, input_count = read_input_data('demoData/lsvm-input.csv')
 print("input_count:", input_count)
-
-check, check_count = read_check_data('demoData/lsvm-check.csv')
 print("check_count:", check_count)
+
 
 max_depth = 1
 scale_factor = 50
@@ -145,15 +166,21 @@ enc_bias = ckks_wrapper.Encrypt(bias)
 
 print("beta and bias encrypted")
 
-plain_res = lsvm_plain_beta_plain_input(beta, bias, x)
-#print(plain_res[0:10])
+num = 10
+print_num = 5
 
-enc_res = lsvm_enc_beta_plain_input(ckks_wrapper, enc_beta, enc_bias, x)
-#print(enc_res[0:10])
+plain_res = lsvm_plain_beta_plain_input(beta, bias, x, num)
 
-enc_x = enc_input(ckks_wrapper, x)
-enc_res2 = lsvm_enc_beta_enc_input(ckks_wrapper, enc_beta, enc_bias, enc_x)
-#print(enc_res2[0:10])
+print("plain:", ["{0:0.2f}".format(i) for i in plain_res[0:print_num]])
+
+enc_res = lsvm_enc_beta_plain_input(ckks_wrapper, enc_beta, enc_bias, x, num)
+
+print("enc:  ", ["{0:0.2f}".format(i) for i in enc_res[0:print_num]])
+
+enc_x = enc_input(ckks_wrapper, x, num)
+enc_res2 = lsvm_enc_beta_enc_input(ckks_wrapper, enc_beta, enc_bias, enc_x, num)
+
+print("enc2: ", ["{0:0.2f}".format(i) for i in enc_res2[0:print_num]])
 
 TT, FF, TF, FT = confusion_table(enc_res2, check)
 
