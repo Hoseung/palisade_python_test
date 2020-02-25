@@ -19,6 +19,9 @@ import seaborn as sn
 import pandas as pd
 import matplotlib.pyplot as plt
 
+def next_power_of_2(x):  
+    return 1 if x == 0 else 2**(x - 1).bit_length()
+
 sign = lambda x: (1, -1)[x < 0]
 
 with open('demoData/lsvm-model.csv') as csv_file:
@@ -82,7 +85,7 @@ for i in range(len(x)):
     print(i)
     enc_x = ckks_wrapper.Encrypt(x[i])
     enc_betaxi = ckks_wrapper.EvalMult(enc_beta, enc_x)
-    enc_ip = ckks_wrapper.EvalSum(enc_betaxi, feature_count)
+    enc_ip = ckks_wrapper.EvalSum(enc_betaxi, next_power_of_2(feature_count))
     enc_svm = ckks_wrapper.EvalAdd(enc_ip, enc_bias)
     dec_svm = ckks_wrapper.Decrypt(enc_svm)
     #dec_svm = [round(v) for v in dec_svm]

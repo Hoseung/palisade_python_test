@@ -45,8 +45,7 @@ void Crypto::KeyGen(uint32_t multDepth, uint32_t scaleFactorBits, uint32_t batch
 	m_cc->Enable(SHE);
 	m_keys = m_cc->KeyGen();
 	m_cc->EvalMultKeyGen(m_keys.secretKey);
-	std::vector<usint> indexList = {5, 25, 625};
-	m_autokeys = m_cc->EvalAutomorphismKeyGen(m_keys.secretKey, indexList);
+	m_cc->EvalSumKeyGen(m_keys.secretKey);
 }
 
 CiphertextInterfaceType* Crypto::Encrypt(const boost::python::list &pyvals) {
@@ -89,12 +88,7 @@ CiphertextInterfaceType* Crypto::EvalSum(
 		const CiphertextInterfaceType &ciphertext,
 		usint batch_size) {
 	auto cipher = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>(ciphertext.GetCiphertext()));
-	auto c1 = m_cc->EvalAutomorphism(cipher, 5, *m_autokeys);
-	auto cipherSum= m_cc->EvalAdd(cipher, c1);
-	c1 = m_cc->EvalAutomorphism(cipherSum, 25, *m_autokeys);
-	cipherSum = m_cc->EvalAdd(cipherSum, c1);
-	c1 = m_cc->EvalAutomorphism(cipherSum, 625, *m_autokeys);
-	cipherSum = m_cc->EvalAdd(cipherSum, c1);
+	auto cipherSum = m_cc->EvalSum(cipher, batch_size);
 	return new CiphertextInterfaceType(cipherSum);
 }
 

@@ -59,8 +59,6 @@ private:
 	CryptoContext<DCRTPoly> m_cc;
 
 	LPKeyPair<DCRTPoly> m_keys;
-
-	shared_ptr<std::map<usint, LPEvalKey<DCRTPoly>>> m_autokeys;
 };
 
 }
