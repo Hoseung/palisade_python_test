@@ -1,52 +1,45 @@
-﻿//PYTHON WRAPPER
-#define BOOST_PYTHON_STATIC_LIB //needed for Windows
+﻿#include <vector>
+#include <complex>
 
 #include <boost/python.hpp>
+#include "ckks_wrapper.h"
 
-#include "tbolininterface.h"
-
-using namespace std;
 using namespace boost::python;
 
-template <typename T> class cppVectorToPythonList {
-
+class cppVectorToPythonList {
 public:
 
-	static PyObject* convert(const vector<T>& vector) {
-
+	/**
+	 * Convert from vector<complex<double>> to python list.
+	 * Only real parts of vector<complex<double>> are stored
+	 */
+	static PyObject* convert(const std::vector<complex<double>>& vector) {
 		boost::python::list* pythonList = new boost::python::list();
-
 		for (unsigned int i = 0; i < vector.size(); i++) {
-			pythonList->append(vector[i]);
+			pythonList->append(vector[i].real());
 		}
-
 		return pythonList->ptr();
 	}
+
 };
 
 BOOST_PYTHON_MODULE(pycrypto) {
+	/*
+	 * Whenever a vector<complex<double> is returned by a function,
+	 * it will automatically be converted to a Python list
+	 * with real parts of complex values in vector<complex<double>
+	 */
+	to_python_converter<std::vector<complex<double>>, cppVectorToPythonList>();
 
-	// Whenever a vector<int> is returned by a function, it will automatically be converted to a Python list.
-	to_python_converter<vector<int64_t>, cppVectorToPythonList<int64_t> >();
-	to_python_converter<vector<double>, cppVectorToPythonList<double> >();
+	class_<pycrypto::CiphertextInterfaceType>("Ciphertext");
 
-    // no_init tells boost.python that Ciphertext's constructor shouldn't be accessed by the Python interface.
-    // Whenever a pointer is returned, a return_value_policy<manage_new_object>() is specified to tell Python that it should
-    // take responsibility over the object and delete it when not used anymore (to avoid memory leaks). If no return_value_policy
-    // is specified, a compilation error will occur.
-    // staticmethod is important to specify when a static method is involved, or else a compilation error will occur.
-	class_<pycrypto::TBOLinear >("TBOLinear")
-		.def("Initialize", &pycrypto::TBOLinear::Initialize)
-		.def("KeyGen", &pycrypto::TBOLinear::KeyGen)
-		.def("TokenGen", &pycrypto::TBOLinear::TokenGen)
-		.def("Obfuscate", &pycrypto::TBOLinear::Obfuscate)
-		.def("Evaluate", &pycrypto::TBOLinear::Evaluate)
-		.def("EvaluateClear", &pycrypto::TBOLinear::EvaluateClear);
+	class_<pycrypto::CKKSwrapper>("CKKSwrapper")
+		.def("KeyGen", &pycrypto::CKKSwrapper::KeyGen)
+		.def("Encrypt", &pycrypto::CKKSwrapper::Encrypt, return_value_policy<manage_new_object>())
+		.def("Decrypt", &pycrypto::CKKSwrapper::Decrypt)
+		.def("EvalAdd", &pycrypto::CKKSwrapper::EvalAdd, return_value_policy<manage_new_object>())
+		.def("EvalMult", &pycrypto::CKKSwrapper::EvalMult, return_value_policy<manage_new_object>())
+		.def("EvalMultConst", &pycrypto::CKKSwrapper::EvalMultConst, return_value_policy<manage_new_object>())
+		.def("EvalSum", &pycrypto::CKKSwrapper::EvalSum, return_value_policy<manage_new_object>());
 
 }
-
-
-
-
-
-

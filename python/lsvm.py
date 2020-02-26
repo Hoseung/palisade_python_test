@@ -1,135 +1,248 @@
-# Currently the demo uses three CSV files: lsvm-model.csv, lsvm-input.csv,
-# and lasvm-check.csv. They are located in the demoData folder.
-#
+# Currently the demo uses three CSV files: 
+# lsvm-model.csv, 
+# lsvm-input.csv,
+# lsvm-check.csv. 
+# They are located in the demoData folder.
+#  
 # structure of lsvm-model.csv:
 # scaling factor s
 # beta vector (one component per line)
 # bias
-#
+# 
 # structure of lsvm-input.csv:
 # input line by line (the bias term is automatically added)
-#
+# 
 # structure of lsvm-check.csv:
 # 1 or -1 (in the same order as records in lsvm-input.csv)
 
-
 import pycrypto
+import random
 import csv
 import seaborn as sn
 import pandas as pd
 import matplotlib.pyplot as plt
+from llvmlite.binding.ffi import OutputString
+
 
 sign = lambda x: (1, -1)[x < 0]
 
-#Main paramaters
 
-# security parameter
-n = 2048
+#smalles power of two >= x
+def next_power_of_2(x):  
+    return 1 if x == 0 else 2**(x - 1).bit_length()
 
-# number of decimal digits after the point
-prec = 3
 
-# prec + 1 means the values of x/s and beta,b are not higher than 10 (10^1)
-xmax = 10**(prec+1)
-wmax = 10**(prec+1)
+# Reads lsvm-model.csv file and outputs:
+# beta - scaled beta, i.e. beta/s
+# bias - scaled bias, i.e. bias/s
+# feature_count - beta length
+def read_model_data(model_csv):
+    csv_file = open(model_csv)
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    feature_count = 0
+    beta = []
+    for row in csv_reader:
+        if feature_count == 0:
+            s = float(row[0])
+        else:
+            beta.append(float(row[0])/s)
+        feature_count += 1
+    feature_count = feature_count - 2
+    bias = beta[feature_count:(feature_count+1)]
+    beta = beta[0:feature_count]
+    return beta, bias, feature_count
 
-# read the linear SVM model
-# first line is the scaling factor
-# the remaining lines are the predictor vector + bias at the end
-with open('demoData/lsvm-model.csv') as csv_file:
-	csv_reader = csv.reader(csv_file, delimiter=',')
-	line_count = 0
-	beta = []
-	for row in csv_reader:
-		if line_count == 0:
-			s = float(row[0])
-		else:
-			beta.append(float(row[0]))
-		line_count += 1
+    
+# Reads lsvm-input.csv file and outputs:
+# x - list of input vectors
+# input_count - x length
+def read_input_data(input_csv):
+    csv_file = open(input_csv)
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    input_count = 0
+    x = []
+    for row in csv_reader:
+        xitem = []
+        for column in row:
+            xitem.append(float(column))
+        x.append(xitem);
+        input_count += 1
+    return x, input_count
 
-feature_count = line_count - 2
 
-print ("number of features: ",str(feature_count))
+# Reads lsvm-check.csv file and outputs:
+# check - check list of +1/-1 
+# check_count - check length
+def read_check_data(check_csv):        
+    csv_file = open(check_csv)
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    check_count = 0
+    check = []
+    for row in csv_reader:
+        check.append(float(row[0]));
+        check_count += 1
+    return check, check_count
 
-N = feature_count + 1
 
-# load the inputs
-with open('demoData/lsvm-input.csv') as csv_file:
-	csv_reader = csv.reader(csv_file, delimiter=',')
-	input_count = 0
-	x = []
-	for row in csv_reader:
-		xitem = []
-		for column in row:
-			xitem.append(float(column))
-		x.append(xitem);
-		input_count += 1
+# Shuffles the input and check lists
+# This function is needed if we test random sublists
+def shuffle_data(x, check):
+    c = list(zip(x, check))
+    random.shuffle(c)
+    x, check = zip(*c)
+    return x, check
 
-print ("input size: ",str(input_count))
 
-# load the correct classification (for checking)
-with open('demoData/lsvm-check.csv') as csv_file:
-	csv_reader = csv.reader(csv_file, delimiter=',')
-	check_count = 0
-	check = []
-	for row in csv_reader:
-		check.append(float(row[0]));
-		check_count += 1
+# Plain version of lsvm
+# num - number of inputs to be tested
+# Outputs prediction list
+def lsvm_plain_beta_plain_input(beta, bias, x, num):
+    res = []
+    for i in range(num):
+        betaxi = [a*b for a,b in zip(beta,x[i])]
+        ip = sum(betaxi)
+        ip = ip + bias[0]
+        res.append(ip)
+    return res    
 
-tbo = pycrypto.TBOLinear()
 
-tbo.Initialize(N, n, wmax, xmax, N);
+# Encrypting input
+# num - number of inputs to be enrypted
+def enc_input(ckks_wrapper, x, num):
+    enc_x = []
+    for i in range(num):
+        enc_x.append(ckks_wrapper.Encrypt(x[i]))
+    return enc_x
 
-print ("\nInitialized the obfuscator.")
 
-tbo.KeyGen();
+# Encrypted version of lsvm with encrypted beta and bias and unencrypted input
+# num - number of inputs to be tested
+# Outputs encrypted prediction list
+def lsvm_enc_beta_plain_input(ckks_wrapper, enc_beta, enc_bias, x, num):
+    enc_res = []
+    for i in range(num):
+        enc_betaxi = ckks_wrapper.EvalMultConst(enc_beta, x[i])
+        enc_ip = ckks_wrapper.EvalSum(enc_betaxi, next_power_of_2(feature_count))
+        enc_svm = ckks_wrapper.EvalAdd(enc_ip, enc_bias)        
+        enc_res.append(enc_svm)
+    return enc_res
 
-print ("Generated the secret keys.")
+# Encrypted version of lsvm with encrypted beta and bias and unencrypted input
+# num - number of inputs to be tested
+# Outputs encrypted prediction list
+def lsvm_enc_beta_enc_input(ckks_wrapper, enc_beta, enc_bias, enc_x, num):
+    enc_res = []
+    for i in range(num):          
+        enc_betaxi = ckks_wrapper.EvalMult(enc_beta, enc_x[i])
+        enc_ip = ckks_wrapper.EvalSum(enc_betaxi, next_power_of_2(feature_count))
+        enc_svm = ckks_wrapper.EvalAdd(enc_ip, enc_bias)
+        enc_res.append(enc_svm)
+    return enc_res
 
-betaInt = [int(round(item*10**prec)) for item in beta]
 
-print ("weights vector: ",str(betaInt))
+# Decrypting output
+# num - number of outputs to be decrypted
+def dec_output(ckks_wrapper, enc_res, num):
+    res = []
+    for i in range(num):
+        dec_res = ckks_wrapper.Decrypt(enc_res[i])
+        res.append(dec_res[0])
+    return res
 
-tbo.Obfuscate(betaInt)
 
-print ("Obfuscated the program.")
+# Calculate confusion table for lsvm predictions
+def confusion_table(res, check): 
+    TT, FF, TF, FT = 0, 0, 0, 0
+    for i in range(len(res)):
+        if sign(res[i])==check[i]:
+            if sign(res[i])==1:
+                TT += 1
+            else:
+                FF += 1
+        else:
+            if sign(res[i])==1:
+                FT += 1
+            else:
+                TF += 1
+    return TT, FF, TF, FT    
 
-TT = 0
-FF = 0
-TF = 0
-FT = 0
 
-for i in range(len(x)):
-	query = [int(round(item/s*10**prec)) for item in x[i]] + [int(10**prec)]
-	tbo.TokenGen(query)
-	#print "\ninput query: " + str(query)
-	result1 = tbo.Evaluate(query)
-	if sign(result1)==check[i]:
-		#print str(sign(result1)) + ": CORRECT"
-		if sign(result1)==1:
-			TT += 1
-		else:
-			FF += 1
-	else:
-		#print str(sign(result1)) + ": INCORRECT"
-		if sign(result1)==1:
-			FT += 1
-		else:
-			TF += 1
-	#print "result encrypted: " + str(result1)
-	#result2 = tbo.EvaluateClear(query,betaInt)
-	#print "result in the clear: " + str(result2)
+"""Input 1"""
+beta, bias, feature_count = read_model_data('demoData/lsvm-model.csv')
+x, input_count = read_input_data('demoData/lsvm-input.csv')
+check, check_count = read_check_data('demoData/lsvm-check.csv')
 
+"""Input 2"""
+# beta, bias, feature_count = read_model_data('demoData/lsvm-credit-model.csv')
+# x, input_count = read_input_data('demoData/lsvm-credit-input.csv')
+# check, check_count = read_check_data('demoData/lsvm-credit-check.csv')
+
+"""Input 3"""
+# beta, bias, feature_count = read_model_data('demoData/lsvm-ion-model.csv')
+# x, input_count = read_input_data('demoData/lsvm-ion-input.csv')
+# check, check_count = read_check_data('demoData/lsvm-ion-check.csv')
+
+
+print("feature_count:", feature_count)
+print("input_count:", input_count)
+print("check_count:", check_count)
+
+
+#CKKS related parameters
+max_depth = 1
+scale_factor = 50
+batch_size = 512
+
+print("-----Initializing ckks wrapper-----")
+ckks_wrapper = pycrypto.CKKSwrapper()
+
+ckks_wrapper.KeyGen(max_depth, scale_factor, batch_size)
+print("-----Keys generated-----")
+
+enc_beta = ckks_wrapper.Encrypt(beta)
+enc_bias = ckks_wrapper.Encrypt(bias)
+print("-----beta and bias are encrypted-----")
+
+x, check = shuffle_data(x, check)
+print("input shuffled")
+#num - number of inputs to be tested. After shuffle the inputs will be random.
+#num should be <= input_count
+num = 50
+print_num = 5
+print("number of inputs to be tested:", num)
+
+
+print("-----START LSVM-----")
+
+res_plain = lsvm_plain_beta_plain_input(beta, bias, x, num)
+
+print("res for plain case:      ", ["{0:0.2f}".format(i) for i in res_plain[0:print_num]])
+
+enc_res_plain_input = lsvm_enc_beta_plain_input(ckks_wrapper, enc_beta, enc_bias, x, num)
+res_plain_input = dec_output(ckks_wrapper, enc_res_plain_input, num)
+
+print("res for plain input case:", ["{0:0.2f}".format(i) for i in res_plain_input[0:print_num]])
+
+enc_x = enc_input(ckks_wrapper, x, num)
+enc_res_enc_input = lsvm_enc_beta_enc_input(ckks_wrapper, enc_beta, enc_bias, enc_x, num)
+res_enc_input = dec_output(ckks_wrapper, enc_res_enc_input, num)
+
+print("res for enc input case:  ", ["{0:0.2f}".format(i) for i in res_enc_input[0:print_num]])
+
+print("-----LSVM FINISHED-----")
+
+
+TT, FF, TF, FT = confusion_table(res_enc_input, check)
 print ("\nConfusion Table")
-print ("FF = ",str(float(FF)/float(len(x))))
-print ("FT = ",str(float(FT)/float(len(x))))
-print ("TF = ",str(float(TF)/float(len(x))))
-print ("TT = ",str(float(TT)/float(len(x))))
+
+print ("FF = ",str(float(FF)/float(num)))
+print ("FT = ",str(float(FT)/float(num)))
+print ("TF = ",str(float(TF)/float(num)))
+print ("TT = ",str(float(TT)/float(num)))
 
 # graphical output of the confusion table
-
-array = [[float(FF)/float(len(x))*100.0,float(FT)/float(len(x))*100.0],
-     [float(TF)/float(len(x))*100.0,float(TT)/float(len(x))*100.0]]        
+array = [[float(FF)/float(num)*100.0,float(FT)/float(num)*100.0],
+     [float(TF)/float(num)*100.0,float(TT)/float(num)*100.0]]        
 
 df_cm = pd.DataFrame(array, ["F","T"],
                   ["F","T"])
@@ -145,17 +258,3 @@ plt.show()
 
 print ("\nDemo completed")
 
-#More sophisticated example from https://stackoverflow.com/questions/35572000/how-can-i-plot-a-confusion-matrix
-'''
-array = [[13,1,1,0,2,0],
-     [3,9,6,0,1,0],
-     [0,0,16,2,0,0],
-     [0,0,0,13,0,0],
-     [0,0,0,0,15,0],
-     [0,0,1,0,0,15]]        
-df_cm = pd.DataFrame(array, range(6),
-                  range(6))
-#plt.figure(figsize = (10,7))
-sn.set(font_scale=1.4)#for label size
-sn.heatmap(df_cm, annot=True,annot_kws={"size": 16})# font size
-'''
