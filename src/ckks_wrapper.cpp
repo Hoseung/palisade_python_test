@@ -1,15 +1,16 @@
-#include "ckks_wrapper.h"
-
-#include <sstream>
 #include <vector>
 
-using namespace std;
+#include "ckks_wrapper.h"
+
 using namespace lbcrypto;
 
 namespace pycrypto {
 
-vector<complex<double>> pythonListToCppVector(const boost::python::list &pylist) {
-	vector<complex<double>> cppVector;
+/**
+ * Converter from pylist to vector<complex<double>> with real parts from pylist and imag parts zero
+ */
+std::vector<complex<double>> pythonListToCppVector(const boost::python::list &pylist) {
+	std::vector<complex<double>> cppVector;
 	for (unsigned int i = 0; i < len(pylist); i++) {
 		double val = boost::python::extract<double>(pylist[i]);
 		cppVector.push_back(complex<double>(val, 0.));
@@ -32,10 +33,10 @@ const CiphertextImpl<DCRTPoly>& CiphertextInterfaceType::GetCiphertext() const {
 	return *m_ciphertext;
 }
 
-Crypto::Crypto() {
+CKKSwrapper::CKKSwrapper() {
 }
 
-void Crypto::KeyGen(uint32_t multDepth, uint32_t scaleFactorBits, uint32_t batchSize) {
+void CKKSwrapper::KeyGen(uint32_t multDepth, uint32_t scaleFactorBits, uint32_t batchSize) {
 	m_cc = CryptoContextFactory<DCRTPoly>::genCryptoContextCKKS(
 			   multDepth,
 			   scaleFactorBits,
@@ -48,14 +49,14 @@ void Crypto::KeyGen(uint32_t multDepth, uint32_t scaleFactorBits, uint32_t batch
 	m_cc->EvalSumKeyGen(m_keys.secretKey);
 }
 
-CiphertextInterfaceType* Crypto::Encrypt(const boost::python::list &pyvals) {
-	vector<complex<double>> vals = pythonListToCppVector(pyvals);
+CiphertextInterfaceType* CKKSwrapper::Encrypt(const boost::python::list &pyvals) {
+	std::vector<complex<double>> vals = pythonListToCppVector(pyvals);
 	shared_ptr<PlaintextImpl> ptxt = m_cc->MakeCKKSPackedPlaintext(vals);
 	Ciphertext<DCRTPoly> ctxt = m_cc->Encrypt(m_keys.publicKey, ptxt);
 	return new CiphertextInterfaceType(ctxt);
 }
 
-PlaintextInterfaceType Crypto::Decrypt(const CiphertextInterfaceType &ciphertextInterface) {
+vector<complex<double>> CKKSwrapper::Decrypt(const CiphertextInterfaceType &ciphertextInterface) {
 	const CiphertextImpl<DCRTPoly> &ct = ciphertextInterface.GetCiphertext();
 	Ciphertext<DCRTPoly> ciphertext(new CiphertextImpl<DCRTPoly>(ct));
 	Plaintext result;
@@ -64,7 +65,7 @@ PlaintextInterfaceType Crypto::Decrypt(const CiphertextInterfaceType &ciphertext
 	return result->GetCKKSPackedValue();
 }
 
-CiphertextInterfaceType* Crypto::EvalAdd(
+CiphertextInterfaceType* CKKSwrapper::EvalAdd(
 		const CiphertextInterfaceType &ciphertext1,
 		const CiphertextInterfaceType &ciphertext2) {
 	auto cipher1 = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>(ciphertext1.GetCiphertext()));
@@ -74,7 +75,7 @@ CiphertextInterfaceType* Crypto::EvalAdd(
 	return new CiphertextInterfaceType(cipherAdd);
 }
 
-CiphertextInterfaceType* Crypto::EvalMult(
+CiphertextInterfaceType* CKKSwrapper::EvalMult(
 		const CiphertextInterfaceType &ciphertext1,
 		const CiphertextInterfaceType &ciphertext2) {
 	auto cipher1 = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>(ciphertext1.GetCiphertext()));
@@ -84,17 +85,17 @@ CiphertextInterfaceType* Crypto::EvalMult(
 	return new CiphertextInterfaceType(cipherMult);
 }
 
-CiphertextInterfaceType* Crypto::EvalMultConst(
+CiphertextInterfaceType* CKKSwrapper::EvalMultConst(
 		const CiphertextInterfaceType &ciphertext1,
 		const boost::python::list &pylist) {
 	auto cipher1 = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>(ciphertext1.GetCiphertext()));
-	vector<complex<double>> vals = pythonListToCppVector(pylist);
+	std::vector<complex<double>> vals = pythonListToCppVector(pylist);
 	Plaintext plain2 = m_cc->MakeCKKSPackedPlaintext(vals);
 	auto cipherMult = m_cc->EvalMult(cipher1, plain2);
 	return new CiphertextInterfaceType(cipherMult);
 }
 
-CiphertextInterfaceType* Crypto::EvalSum(
+CiphertextInterfaceType* CKKSwrapper::EvalSum(
 		const CiphertextInterfaceType &ciphertext,
 		usint batch_size) {
 	auto cipher = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>(ciphertext.GetCiphertext()));

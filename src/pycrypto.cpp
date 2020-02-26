@@ -1,21 +1,20 @@
-﻿
-#define BOOST_PYTHON_STATIC_LIB //needed for Windows
-
-#include <vector>
+﻿#include <vector>
 #include <complex>
-#include <boost/python.hpp>
 
+#include <boost/python.hpp>
 #include "ckks_wrapper.h"
 
-using namespace std;
 using namespace boost::python;
 
 class cppVectorToPythonList {
 public:
 
-	static PyObject* convert(const vector<complex<double>>& vector) {
+	/**
+	 * Convert from vector<complex<double>> to python list.
+	 * Only real parts of vector<complex<double>> are stored
+	 */
+	static PyObject* convert(const std::vector<complex<double>>& vector) {
 		boost::python::list* pythonList = new boost::python::list();
-
 		for (unsigned int i = 0; i < vector.size(); i++) {
 			pythonList->append(vector[i].real());
 		}
@@ -25,18 +24,22 @@ public:
 };
 
 BOOST_PYTHON_MODULE(pycrypto) {
-
-	to_python_converter<vector<complex<double>>, cppVectorToPythonList>();
+	/*
+	 * Whenever a vector<complex<double> is returned by a function,
+	 * it will automatically be converted to a Python list
+	 * with real parts of complex values in vector<complex<double>
+	 */
+	to_python_converter<std::vector<complex<double>>, cppVectorToPythonList>();
 
 	class_<pycrypto::CiphertextInterfaceType>("Ciphertext");
 
-	class_<pycrypto::Crypto>("Crypto")
-		.def("KeyGen", &pycrypto::Crypto::KeyGen)
-		.def("Encrypt", &pycrypto::Crypto::Encrypt, return_value_policy<manage_new_object>())
-		.def("Decrypt", &pycrypto::Crypto::Decrypt)
-		.def("EvalAdd", &pycrypto::Crypto::EvalAdd, return_value_policy<manage_new_object>())
-		.def("EvalMult", &pycrypto::Crypto::EvalMult, return_value_policy<manage_new_object>())
-		.def("EvalMultConst", &pycrypto::Crypto::EvalMultConst, return_value_policy<manage_new_object>())
-		.def("EvalSum", &pycrypto::Crypto::EvalSum, return_value_policy<manage_new_object>());
+	class_<pycrypto::CKKSwrapper>("CKKSwrapper")
+		.def("KeyGen", &pycrypto::CKKSwrapper::KeyGen)
+		.def("Encrypt", &pycrypto::CKKSwrapper::Encrypt, return_value_policy<manage_new_object>())
+		.def("Decrypt", &pycrypto::CKKSwrapper::Decrypt)
+		.def("EvalAdd", &pycrypto::CKKSwrapper::EvalAdd, return_value_policy<manage_new_object>())
+		.def("EvalMult", &pycrypto::CKKSwrapper::EvalMult, return_value_policy<manage_new_object>())
+		.def("EvalMultConst", &pycrypto::CKKSwrapper::EvalMultConst, return_value_policy<manage_new_object>())
+		.def("EvalSum", &pycrypto::CKKSwrapper::EvalSum, return_value_policy<manage_new_object>());
 
 }
