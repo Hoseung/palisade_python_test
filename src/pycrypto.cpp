@@ -10,10 +10,10 @@ class cppVectorToPythonList {
 public:
 
 	/**
-	 * Convert from vector<complex<double>> to python list.
-	 * Only real parts of vector<complex<double>> are stored
+	 * Convert from vector<std::complex<double>> to python list.
+	 * Only real parts of vector<std::complex<double>> are stored
 	 */
-	static PyObject* convert(const std::vector<complex<double>>& vector) {
+	static PyObject* convert(const std::vector<std::complex<double>>& vector) {
 		boost::python::list* pythonList = new boost::python::list();
 		for (unsigned int i = 0; i < vector.size(); i++) {
 			pythonList->append(vector[i].real());
@@ -25,11 +25,11 @@ public:
 
 BOOST_PYTHON_MODULE(pycrypto) {
 	/*
-	 * Whenever a vector<complex<double> is returned by a function,
+	 * Whenever a vector<std::complex<double> is returned by a function,
 	 * it will automatically be converted to a Python list
-	 * with real parts of complex values in vector<complex<double>
+	 * with real parts of complex values in vector<std::complex<double>
 	 */
-	to_python_converter<std::vector<complex<double>>, cppVectorToPythonList>();
+	to_python_converter<std::vector<std::complex<double>>, cppVectorToPythonList>();
 
 	class_<pycrypto::CiphertextInterfaceType>("Ciphertext");
 

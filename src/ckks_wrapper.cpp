@@ -7,13 +7,13 @@ using namespace lbcrypto;
 namespace pycrypto {
 
 /**
- * Converter from pylist to vector<complex<double>> with real parts from pylist and imag parts zero
+ * Converter from pylist to vector<std::complex<double>> with real parts from pylist and imag parts zero
  */
-std::vector<complex<double>> pythonListToCppVector(const boost::python::list &pylist) {
-	std::vector<complex<double>> cppVector;
+std::vector<std::complex<double>> pythonListToCppVector(const boost::python::list &pylist) {
+	std::vector<std::complex<double>> cppVector;
 	for (unsigned int i = 0; i < len(pylist); i++) {
 		double val = boost::python::extract<double>(pylist[i]);
-		cppVector.push_back(complex<double>(val, 0.));
+		cppVector.push_back(std::complex<double>(val, 0.));
 	}
 	return cppVector;
 }
@@ -50,13 +50,13 @@ void CKKSwrapper::KeyGen(uint32_t multDepth, uint32_t scaleFactorBits, uint32_t 
 }
 
 CiphertextInterfaceType* CKKSwrapper::Encrypt(const boost::python::list &pyvals) {
-	std::vector<complex<double>> vals = pythonListToCppVector(pyvals);
+	std::vector<std::complex<double>> vals = pythonListToCppVector(pyvals);
 	shared_ptr<PlaintextImpl> ptxt = m_cc->MakeCKKSPackedPlaintext(vals);
 	Ciphertext<DCRTPoly> ctxt = m_cc->Encrypt(m_keys.publicKey, ptxt);
 	return new CiphertextInterfaceType(ctxt);
 }
 
-vector<complex<double>> CKKSwrapper::Decrypt(const CiphertextInterfaceType &ciphertextInterface) {
+vector<std::complex<double>> CKKSwrapper::Decrypt(const CiphertextInterfaceType &ciphertextInterface) {
 	const CiphertextImpl<DCRTPoly> &ct = ciphertextInterface.GetCiphertext();
 	Ciphertext<DCRTPoly> ciphertext(new CiphertextImpl<DCRTPoly>(ct));
 	Plaintext result;
@@ -89,7 +89,7 @@ CiphertextInterfaceType* CKKSwrapper::EvalMultConst(
 		const CiphertextInterfaceType &ciphertext1,
 		const boost::python::list &pylist) {
 	auto cipher1 = Ciphertext<DCRTPoly>(new CiphertextImpl<DCRTPoly>(ciphertext1.GetCiphertext()));
-	std::vector<complex<double>> vals = pythonListToCppVector(pylist);
+	std::vector<std::complex<double>> vals = pythonListToCppVector(pylist);
 	Plaintext plain2 = m_cc->MakeCKKSPackedPlaintext(vals);
 	auto cipherMult = m_cc->EvalMult(cipher1, plain2);
 	return new CiphertextInterfaceType(cipherMult);

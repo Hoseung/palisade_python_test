@@ -77,7 +77,7 @@ public:
 	 *
 	 * @param c ciphertext
 	 */
-	std::vector<complex<double>> Decrypt(const CiphertextInterfaceType &c);
+	std::vector<std::complex<double>> Decrypt(const CiphertextInterfaceType &c);
 
 	/**
 	 * Ciphertext addition wrapper

@@ -20,6 +20,7 @@ include_directories( ${OPENMP_INCLUDES} )
 include_directories( ${PALISADE_INCLUDE} )
 include_directories( ${PALISADE_INCLUDE}/core )
 include_directories( ${PALISADE_INCLUDE}/pke )
+include_directories( ${PALISADE_INCLUDE}/third-party/include )
 
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
