@@ -3,3 +3,6 @@ build/
 /.cproject
 /.project
 /.pydevproject
+__pycache__
+*~
+!.gitignore

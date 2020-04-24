@@ -57,6 +57,7 @@ Note that "sudo apt-get install g++-<version>" can be used to install a specific
 
 > export PYTHONPATH=$(pwd)/build/lib:$PYTHONPATH
 
-> python3 python/lsvm.py
+> python3 python/lsvm.py -m simple  -v -n -1
+
 
 
