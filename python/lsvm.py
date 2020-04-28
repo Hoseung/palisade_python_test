@@ -24,6 +24,7 @@ import random
 import csv
 
 import confusion # accesory scripts to compute and draw confusion matricies
+from _pylief import NONE
 
 ######################
 #FUNCITONS############
@@ -59,6 +60,35 @@ def read_model_data(model_csv):
     return beta, bias, feature_count
 
 ############################################
+# Reads lsvm-model.csv file and returns:
+# beta - scaled beta, i.e. beta/s
+# bias - scaled bias, i.e. bias/s
+# feature_count - beta length
+# mu - data normalization parameter
+# sigma - data normalization parameter
+
+def read_model_data_unnorm(model_csv):
+    csv_file = open(model_csv)
+    csv_reader = csv.reader(csv_file, delimiter=",")
+    feature_count = 0
+    beta = []
+    mu = []
+    sigma = []
+    for row in csv_reader:
+        if feature_count == 0:
+            s = float(row[0])
+            print('s ', s)
+        else:
+            beta.append(float(row[0])/s)
+            mu.append(float(row[1]))
+            sigma.append(float(row[2]))
+        feature_count += 1
+    feature_count = feature_count - 2
+    bias = beta[feature_count:(feature_count+1)]
+    beta = beta[0:feature_count]
+    return beta, bias, feature_count, mu, sigma
+
+############################################
 # Reads lsvm-input.csv file and outputs:
 # x - list of input vectors
 # input_count - x length
@@ -72,6 +102,27 @@ def read_input_data(input_csv):
         xitem = []
         for column in row:
             xitem.append(float(column))
+        x.append(xitem);
+        input_count += 1
+    return x, input_count
+
+############################################
+# Reads lsvm-input.csv file together with 
+# normalization parameters and outputs:
+# x - list of input vectors
+# input_count - x length
+
+def read_input_data_unnorm(input_csv, mu, sigma):
+    csv_file = open(input_csv)
+    csv_reader = csv.reader(csv_file, delimiter=",")
+    input_count = 0
+    x = []
+    for row in csv_reader:
+        xitem = []
+        colcount = 0
+        for column in row:
+            xitem.append((float(column)-float(mu[colcount]))/float(sigma[colcount]))
+            colcount += 1
         x.append(xitem);
         input_count += 1
     return x, input_count
@@ -224,14 +275,18 @@ num_test = args.num_test
 print("verbose ", verbose)
 print("model ", model)
 
-if (model == "ovarian") or (model == "credit"):
-    print("models credit and ovarian require data normalization which is not yet supported");
+if (model == "ovarian"):
+    print("model ovarian require data which is not yet supported");
     exit()
-
-beta, bias, feature_count = read_model_data("demoData/lsvm-"+model+"-model.csv")
-x, input_count = read_input_data("demoData/lsvm-"+model+"-input.csv")
-check, check_count = read_check_data("demoData/lsvm-"+model+"-check.csv")
-
+elif (model == "credit"):
+    beta, bias, feature_count, mu, sigma = read_model_data_unnorm("demoData/lsvm-"+model+"-model.csv")
+    x, input_count = read_input_data_unnorm("demoData/lsvm-"+model+"-input.csv", mu, sigma)
+    check, check_count = read_check_data("demoData/lsvm-"+model+"-check.csv")
+else:
+    beta, bias, feature_count = read_model_data("demoData/lsvm-"+model+"-model.csv")
+    x, input_count = read_input_data("demoData/lsvm-"+model+"-input.csv")
+    check, check_count = read_check_data("demoData/lsvm-"+model+"-check.csv")
+        
 print("feature_count:", feature_count)
 print("input_count:", input_count)
 print("check_count:", check_count)
