@@ -52,11 +52,12 @@ def read_model_data(model_csv):
             s = float(row[0])
             print('s ',s)
         else:
-            beta.append(float(row[0])/s)
+            beta.append(float(row[0]))
         feature_count += 1
     feature_count = feature_count - 2
     bias = beta[feature_count:(feature_count+1)]
     beta = beta[0:feature_count]
+    beta[:] = [item / s for item in beta]
     return beta, bias, feature_count
 
 ############################################
@@ -79,13 +80,14 @@ def read_model_data_unnorm(model_csv):
             s = float(row[0])
             print('s ', s)
         else:
-            beta.append(float(row[0])/s)
+            beta.append(float(row[0]))
             mu.append(float(row[1]))
             sigma.append(float(row[2]))
         feature_count += 1
     feature_count = feature_count - 2
     bias = beta[feature_count:(feature_count+1)]
     beta = beta[0:feature_count]
+    beta[:] = [item / s for item in beta]
     return beta, bias, feature_count, mu, sigma
 
 ############################################
