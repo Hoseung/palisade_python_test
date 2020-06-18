@@ -275,10 +275,10 @@ num_test = args.num_test
 print("verbose ", verbose)
 print("model ", model)
 
-if (model == "ovarian"):
-    print("model ovarian require data which is not yet supported");
-    exit()
-elif (model == "credit"):
+# if (model == "ovarian"):
+#     print("model ovarian require data which is not yet supported");
+#     exit()
+if (model == "credit" or model == "ovarian"):
     beta, bias, feature_count, mu, sigma = read_model_data_unnorm("demoData/lsvm-"+model+"-model.csv")
     x, input_count = read_input_data_unnorm("demoData/lsvm-"+model+"-input.csv", mu, sigma)
     check, check_count = read_check_data("demoData/lsvm-"+model+"-check.csv")
@@ -302,7 +302,7 @@ print("number to test:", num_test)
 #CKKS related parameters
 max_depth = 1
 scale_factor = 50
-batch_size = 512
+batch_size = next_power_of_2(feature_count + 1)
 
 print("-----Initializing ckks wrapper-----")
 st = tic()
