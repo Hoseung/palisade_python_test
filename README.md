@@ -57,7 +57,23 @@ Note that "sudo apt-get install g++-<version>" can be used to install a specific
 
 > export PYTHONPATH=$(pwd)/build/lib:$PYTHONPATH
 
+Note the above can be executed in the root directory by using
+
+>source setuppython
+
+You can now run the four demo models with 
+
 > python3 python/lsvm.py -m simple  -v -n -1
+> python3 python/lsvm.py -m credit  -v -n -1
+> python3 python/lsvm.py -m ion  -v -n -1
+> python3 python/lsvm.py -m ovarian  -v -n -1
 
+lsvm.py can be run with the -h command for full instructions on runtime parameters. 
 
+The models:
+==========
 
+simple - a simple binary classification of random data
+credit - clasification of credit scores into two classes
+ion - classification of ion discharge received in several antennas
+ovarian - ovarian cancer detection

@@ -1,9 +1,5 @@
 # Copyright 2020 Duality Technologies Inc.
-# This file is considered proprietary information of Duality Technologies Inc.
-# and should not be shared externally without permission.
 #
 # Authors: David Cousins
-
-
-echo "this must be in phase1 directory using source ./setuppython"
+echo "this should be run in root directory using source ./setuppython"
 export PYTHONPATH=$(pwd)/build/lib:$PYTHONPATH
