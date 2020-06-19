@@ -24,7 +24,7 @@ import random
 import csv
 
 import confusion # accesory scripts to compute and draw confusion matricies
-from _pylief import NONE
+#from _pylief import NONE
 
 ######################
 #FUNCITONS############
