@@ -76,10 +76,40 @@ lsvm.py can be run with the -h command for full instructions on runtime paramete
 The models:
 ==========
 
-simple - a simple binary classification of random data
+Four different example data sets are provided, to offer a range of data that is large in the number of features or number of observations. 
 
-credit - clasification of credit scores into two classes
+*simple* - a simple binary classification of two feature random data
 
-ion - classification of ion discharge received in several antennas
+Number of Features: 2
+Number of observations: 200
 
-ovarian - ovarian cancer detection
+*ion* - Ionosphere dataset from the UCI machine learning repository:
+
+http://archive.ics.uci.edu/ml/datasets/Ionosphere
+
+Signals from a phased array of 16 high-frequency antennas. Good (+1)
+returned radar signals are those showing evidence of some type of
+structure in the ionosphere. Bad (-1) signals are those that pass
+through the ionosphere.
+	
+Number of features: 34 
+Number of observations: 351 
+
+*credit* - clasification of credit raitings grouped into two classes
+
+from Matlab's CreditRating_Historical.dat sample data
+
+Features are WC_TA, RE_TA, EBIT_TA, MVE_BVTD, S_TA, Industry
+
+classification is 1 = rating A, AA, AAA, -1 = all others.
+
+Number of features: 6 
+Number of observations: 3932 
+
+*ovarian* - ovarian cancer detection
+
+Ovarian cancer data generated using the WCX2 protein array. Includes
+95 controls and 121 ovarian cancers.
+
+Number of features: 4000 
+Number of observations: 216 
