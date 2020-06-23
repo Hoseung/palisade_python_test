@@ -1,3 +1,6 @@
+# Authors: David Bruce Cousins NJIT 2020
+# confusion matrix and statistics plotting 
+
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -6,13 +9,16 @@ from matplotlib.offsetbox import (TextArea, DrawingArea, OffsetImage,
                                   AnnotationBbox)
 
 #################################################################
-#functions to plot and annotate a confusion matrix
+# functions to plot and annotate a confusion matrix
 
-sign = lambda x: (1, -1)[x < 0]
+
+def sign(x): return (1, -1)[x < 0]
 
 #################################################################
+
+
 def draw(indata, row_labels, col_labels, ax=None,
-            cbar_kw={}, cbarlabel="", **kwargs):
+         cbar_kw={}, cbarlabel="", **kwargs):
     """
     Create a confusion heatmap from a numpy array and two lists of labels.
 
@@ -37,13 +43,13 @@ def draw(indata, row_labels, col_labels, ax=None,
 
     # Plot the heatmap
     # make off diagonal values actually 100 - value since zero is good
-    data = np.array(indata);
-    newdata = 100.0 - data;
-    for (x,y), value in np.ndenumerate(newdata):
+    data = np.array(indata)
+    newdata = 100.0 - data
+    for (x, y), value in np.ndenumerate(newdata):
         if (x == y):
-            newdata[x,y] = data[x, y];
+            newdata[x, y] = data[x, y]
 
-    #and use that for the display
+    # and use that for the display
     im = ax.imshow(newdata, vmin=0.0, vmax=100.0, **kwargs)
 
     # Create colorbar
@@ -70,20 +76,22 @@ def draw(indata, row_labels, col_labels, ax=None,
     for edge, spine in ax.spines.items():
         spine.set_visible(False)
 
-    ax.set_xticks(np.arange(data.shape[1]+1)-.5, minor=True)
-    ax.set_yticks(np.arange(data.shape[0]+1)-.5, minor=True)
+    ax.set_xticks(np.arange(data.shape[1] + 1) - .5, minor=True)
+    ax.set_yticks(np.arange(data.shape[0] + 1) - .5, minor=True)
     ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
     ax.tick_params(which="minor", bottom=False, left=False)
 
     if cbarlabel == "":
         return im
-    else :
+    else:
         return im, cbar
 
 #################################################################
+
+
 def annotate(im, indata=None, valfmt="{x:.2f}",
-                     textcolors=["black", "black"],
-                     threshold=None, **textkw):
+             textcolors=["black", "black"],
+             threshold=None, **textkw):
     """
     A function to annotate a confusion matrix .
 
@@ -105,16 +113,14 @@ def annotate(im, indata=None, valfmt="{x:.2f}",
     """
 
     data = np.array(indata)
-    #if not isinstance(indata, (list, np.ndarray)):
+    # if not isinstance(indata, (list, np.ndarray)):
     #    data = (list, im.get_array())
 
-
-        
     # Normalize the threshold to the images color range.
     if threshold is not None:
         threshold = im.norm(threshold)
     else:
-        threshold = im.norm(data.max())/2.
+        threshold = im.norm(data.max()) / 2.
 
     # Set default alignment to center, but allow it to be
     # overwritten by textkw.
@@ -140,65 +146,68 @@ def annotate(im, indata=None, valfmt="{x:.2f}",
 ############################################
 # Calculate confusion table and statistics for lsvm predictions
 # TP true positive
-# TN true negative 
+# TN true negative
 # FP false positive
-# 
-def calculate(res, check): 
+#
+
+
+def calculate(res, check):
     TP, TN, FN, FP = 0, 0, 0, 0
     for i in range(len(res)):
-        if sign(res[i])==check[i]:
-            if sign(res[i])==1:
+        if sign(res[i]) == check[i]:
+            if sign(res[i]) == 1:
                 TP += 1
             else:
                 TN += 1
         else:
-            if sign(res[i])==1:
+            if sign(res[i]) == 1:
                 FP += 1
             else:
                 FN += 1
-    return TP, TN, FN, FP    
+    return TP, TN, FN, FP
 
 
 ############################################
 # display confusion table and statistics for lsvm predictions
 # TP true positive
-# TN true negative 
+# TN true negative
 # FP false positive
-# 
-def display(res, check, title_str): 
+#
+def display(res, check, title_str):
     TP, TN, FN, FP = 0, 0, 0, 0
     for i in range(len(res)):
-        if sign(res[i])==check[i]:
-            if sign(res[i])==1:
+        if sign(res[i]) == check[i]:
+            if sign(res[i]) == 1:
                 TP += 1
             else:
                 TN += 1
         else:
-            if sign(res[i])==1:
+            if sign(res[i]) == 1:
                 FP += 1
             else:
                 FN += 1
 
     fig, ax = plt.subplots()
-    #plt.cla();
-    AN = (TN+FP)
-    AP = (FN+TP)
-    PN = (TN+FN)
-    PP = (FP+TP)
-    Tot = (AP+AN)
-    array = [[(TN),(FP)],
-             [(FN),(TP)]]
+    # plt.cla();
+    AN = (TN + FP)
+    AP = (FN + TP)
+    PN = (TN + FN)
+    PP = (FP + TP)
+    Tot = (AP + AN)
+    array = [[(TN), (FP)],
+             [(FN), (TP)]]
 
-    TruePosRate =  float(TP)/float(AP)*100.0
-    TrueNegRate = float(TN)/float(AN)*100.0
-    FalsePosRate = float(FP)/float(AN)*100.0
-    MissClassRate = float(FN+FP)/float(Tot)*100.0
-    Accuracy = float(TP+TN)/float(Tot)*100.0
-    Precision = float(TP)/float(PP)*100.0
-    Prevalence = float(AP)/float(Tot)*100.0
+    TruePosRate = float(TP) / float(AP) * 100.0
+    TrueNegRate = float(TN) / float(AN) * 100.0
+    FalsePosRate = float(FP) / float(AN) * 100.0
+    MissClassRate = float(FN + FP) / float(Tot) * 100.0
+    Accuracy = float(TP + TN) / float(Tot) * 100.0
+    Precision = float(TP) / float(PP) * 100.0
+    Prevalence = float(AP) / float(Tot) * 100.0
 
-    print("\nPerformance "+title_str)
-    print("True Pos Rate % =  {0:0.1f} a.k.a. Sensitivity, Recall".format(TruePosRate))
+    print("\nPerformance " + title_str)
+    print(
+        "True Pos Rate % =  {0:0.1f} a.k.a. Sensitivity, Recall".format(TruePosRate))
     print("True Neg Rate % =  {0:0.1f}".format(TrueNegRate))
     print("False Pos Rate % = {0:0.1f}".format(FalsePosRate))
     print("MissClass Rate % = {0:0.1f}".format(MissClassRate))
@@ -206,13 +215,13 @@ def display(res, check, title_str):
     print("Precision % =      {0:0.1f}".format(Precision))
     print("Prevalence % =     {0:0.1f}".format(Prevalence))
 
-    colorarray = [[TrueNegRate,  MissClassRate ],
+    colorarray = [[TrueNegRate, MissClassRate],
                   [MissClassRate, TruePosRate]]
 
-    truelabel =["<=B: "+str(AN),">=A: "+str(AP)]
-    predlabel = ["<=B: "+str(PN),">=A: "+str(PP)]
+    truelabel = ["<=B: " + str(AN), ">=A: " + str(AP)]
+    predlabel = ["<=B: " + str(PN), ">=A: " + str(PP)]
     im, cbar = draw(colorarray, truelabel, predlabel, ax=ax,
-               cmap="RdYlGn", cbarlabel="percentage")
+                    cmap="RdYlGn", cbarlabel="percentage")
 
     texts = annotate(im, array, valfmt="{x:.0f}")
     ax.set_xlabel("Predicted")
@@ -222,16 +231,21 @@ def display(res, check, title_str):
 
     fig.tight_layout()
 
-    # Annotate 
-    offsetbox = TextArea("True Pos Rate % =    {0:2.1f}\nTrue Neg Rate % =   {1:2.1f}\nMissClass Rate % = {2:3.1f}\nAccuracy % =          {3:2.1f}\nPrecision % =          {4:2.1f}".format(TruePosRate,TrueNegRate,MissClassRate,Accuracy,Precision)
-                          , minimumdescent=False)
+    # Annotate
+    offsetbox = TextArea(
+        "True Pos Rate % =    {0:2.1f}\nTrue Neg Rate % =   {1:2.1f}\nMissClass Rate % = {2:3.1f}\nAccuracy % =          {3:2.1f}\nPrecision % =          {4:2.1f}".format(
+            TruePosRate,
+            TrueNegRate,
+            MissClassRate,
+            Accuracy,
+            Precision),
+        minimumdescent=False)
 
     ab = AnnotationBbox(offsetbox, (-0.45, 1.2),
-                    xybox=(-50, -50),
-                    xycoords="data",
-                    boxcoords="offset points")
+                        xybox=(-50, -50),
+                        xycoords="data",
+                        boxcoords="offset points")
     ax.add_artist(ab)
-
 
     plt.show(block=False)
     plt.pause(.1)
