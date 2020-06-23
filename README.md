@@ -1,5 +1,7 @@
 # PALISADE Python 3 Wrapper Demo #
 
+![PALISADE_logo](logo.png "PALISADE")
+
 This repository contains an example python 3 wrapper for PALISADE. It
 does not expose all functionality of PALISADE, rather it is an example
 of how to build a specific python application program using a python
