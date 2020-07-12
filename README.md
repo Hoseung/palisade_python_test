@@ -68,9 +68,8 @@ The  `demoData` directory contains files for four different LSVM models (listed 
 
 ### Build instructions for Arch Linux ###
 
-```bash
-sudo pacman -Syyu autoconf boost boost-libs
-```
+> `sudo pacman -Syyu autoconf boost boost-libs`
+
 
 ### Build instructions for Ubuntu ###
 
