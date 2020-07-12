@@ -64,14 +64,18 @@ The  `demoData` directory contains files for four different LSVM models (listed 
 - `lsvm-*-input.csv` - the input features (one observation per line)
 - `lsvm-*-input.csv` - the correct classification (one observation per line) 
 
+## Initial installation ##
 
-## Build instructions for Ubuntu ##
+### Build instructions for Arch Linux ###
+
+```bash
+sudo pacman -Syyu autoconf boost boost-libs
+```
+
+### Build instructions for Ubuntu ###
 
 Please note that we have not tried installing this on windows or macOS. If anyone does try this, please update this file with instructions.
 It's recommended to use at least Ubuntu 18.04.
-
-
-### Initial installation ###
 
 1. Install pre-requisites (if not already installed):
 `g++`, `cmake`, `make`, and `autoconf`. Sample commands using `apt-get` are listed below. It is possible that these are already installed on your system.
@@ -105,7 +109,11 @@ default.
 
 > `sudo pip3 install cmake --upgrade` 
 
-6. Install required python modules (note some may already be on your system)/ 
+### Python packages ###
+
+Install required python modules (note some may already be on your system)
+
+#### Without a virtual environment ####
 
 > `pip install numpy`
 
@@ -124,7 +132,23 @@ default.
 7. Install python tk for graphical output
 > `sudo apt-get install python-tk`
 
-8. Install PALISADE on your system. Run "make install" at the end.
+#### With conda ####
+
+Install [conda](https://www.anaconda.com/products/individual) as your environment manager
+
+> `conda create -n {project_name} python=3.{X} anaconda`
+
+where you specify the project name and the python version (e.g `3.7`)
+
+> `pip install argparse`
+
+- the other packages such as `numpy, matplotlib, sys, random, csv, timeit, python-tk` should already be installed by conda. If not, install via `pip` within the conda environment.
+
+## Secondary Installation
+
+- after installing all packages from `Initial Installation`
+
+8. Install [PALISADE](https://gitlab.com/palisade/palisade-release/-/tree/master) on your system.
 
 9. Clone the PALISADE Python demo repo (this repo) onto your system.
 
@@ -134,8 +158,7 @@ default.
 
 > `cd build`
 
-
-### Demo build instructions (after the initial install) ###
+## Building the Demo ##
 
 1. In the build directory, run the following commands
 
@@ -147,6 +170,8 @@ default.
 2. Build the python wrapper
 
 > `make`
+
+- Note: if you receive `Error running make: /usr/bin/ld: cannot find -lPALISADEtrapdoor`, you may remove `PALISADEtrapdoor` from the `CMakeLists.txt` and the remaining code should still work
 
 ## Running the Python example program: Linear Support Vector Machine Classifier ##
 
