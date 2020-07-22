@@ -139,9 +139,13 @@ Install [conda](https://www.anaconda.com/products/individual) as your environmen
 
 where you specify the project name and the python version (e.g `3.7`)
 
-> `pip install argparse`
+> `pip install X`
 
-- the other packages such as `numpy, matplotlib, sys, random, csv, timeit, python-tk` should already be installed by conda. If not, install via `pip` within the conda environment.
+- where X is any of `argparse, numpy, matplotlib, sys, random, csv, timeit, python-tk`. Some of these should already be installed by conda but if that's not the case, install them 
+
+> `conda develop build/lib`
+
+- Makes conda aware that you want the built boost library in the path. Equivalent to running `setuppython` file except that we let conda handle the paths
 
 ## Secondary Installation
 
