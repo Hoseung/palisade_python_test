@@ -114,6 +114,8 @@ Install required python modules (note some may already be on your system)
 
 #### Without a virtual environment ####
 
+Note: this is against best practices and may cause issues with your local system packages
+
 > `pip install numpy`
 
 > `pip install matplotlib`
@@ -151,7 +153,7 @@ where you specify the project name and the python version (e.g `3.7`)
 
 - after installing all packages from `Initial Installation`
 
-8. Install [PALISADE](https://gitlab.com/palisade/palisade-release/-/tree/master) on your system.
+8. Install [PALISADE - Development repo](https://gitlab.com/palisade/palisade-development) on your system
 
 9. Clone the PALISADE Python demo repo (this repo) onto your system.
 
@@ -173,8 +175,6 @@ where you specify the project name and the python version (e.g `3.7`)
 2. Build the python wrapper
 
 > `make`
-
-- Note: if you receive `Error running make: /usr/bin/ld: cannot find -lPALISADEtrapdoor`, you may remove `PALISADEtrapdoor` from the `CMakeLists.txt` and the remaining code should still work
 
 ## Running the Python example program: Linear Support Vector Machine Classifier ##
 
