@@ -64,14 +64,17 @@ The  `demoData` directory contains files for four different LSVM models (listed 
 - `lsvm-*-input.csv` - the input features (one observation per line)
 - `lsvm-*-input.csv` - the correct classification (one observation per line) 
 
+## Initial installation ##
 
-## Build instructions for Ubuntu ##
+### Build instructions for Arch Linux ###
+
+> `sudo pacman -Syyu autoconf boost boost-libs`
+
+
+### Build instructions for Ubuntu ###
 
 Please note that we have not tried installing this on windows or macOS. If anyone does try this, please update this file with instructions.
 It's recommended to use at least Ubuntu 18.04.
-
-
-### Initial installation ###
 
 1. Install pre-requisites (if not already installed):
 `g++`, `cmake`, `make`, and `autoconf`. Sample commands using `apt-get` are listed below. It is possible that these are already installed on your system.
@@ -105,7 +108,13 @@ default.
 
 > `sudo pip3 install cmake --upgrade` 
 
-6. Install required python modules (note some may already be on your system)/ 
+### Python packages ###
+
+Install required python modules (note some may already be on your system)
+
+#### Without a virtual environment ####
+
+Note: this is against best practices and may cause issues with your local system packages
 
 > `pip install numpy`
 
@@ -124,7 +133,27 @@ default.
 7. Install python tk for graphical output
 > `sudo apt-get install python-tk`
 
-8. Install PALISADE on your system. Run "make install" at the end.
+#### With conda ####
+
+Install [conda](https://www.anaconda.com/products/individual) as your environment manager
+
+> `conda create -n {project_name} python=3.{X} anaconda`
+
+where you specify the project name and the python version (e.g `3.7`)
+
+> `pip install X`
+
+- where X is any of `argparse, numpy, matplotlib, sys, random, csv, timeit, python-tk`. Some of these should already be installed by conda but if that's not the case, install them 
+
+> `conda develop build/lib`
+
+- Makes conda aware that you want the built boost library in the path. Equivalent to running `setuppython` file except that we let conda handle the paths
+
+## Secondary Installation
+
+- after installing all packages from `Initial Installation`
+
+8. Install [PALISADE - Development repo](https://gitlab.com/palisade/palisade-development) on your system
 
 9. Clone the PALISADE Python demo repo (this repo) onto your system.
 
@@ -134,8 +163,7 @@ default.
 
 > `cd build`
 
-
-### Demo build instructions (after the initial install) ###
+## Building the Demo ##
 
 1. In the build directory, run the following commands
 
