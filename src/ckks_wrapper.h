@@ -27,7 +27,7 @@
 #include <vector>
 
 #include <boost/python.hpp>
-#include <palisade/pke/palisade.h>
+#include <palisade.h>
 
 namespace pycrypto {
 
