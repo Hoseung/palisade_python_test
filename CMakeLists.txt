@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-find_package(Palisade)
+find_package(Palisade 1.10.6) # Palisade's ConfigVersion allows this to mean that 1.10.6 is MINIMUM supported ver.
 
 find_package (Python3 COMPONENTS Interpreter Development)
 if(NOT APPLE)
@@ -45,6 +45,6 @@ install(TARGETS pycrypto DESTINATION lib)
 
 target_link_directories(pycrypto PUBLIC ${PALISADE_DIR}/lib)
 
-target_link_libraries (pycrypto PALISADEcore PALISADEpke PALISADEtrapdoor ${Python3_LIBRARIES} ${Boost_LIBRARIES}  ${THIRDPARTYLIBS} ${OpenMP_CXX_FLAGS})
+target_link_libraries (pycrypto PALISADEcore PALISADEpke ${Python3_LIBRARIES} ${Boost_LIBRARIES}  ${THIRDPARTYLIBS} ${OpenMP_CXX_FLAGS})
 
 # python code ends
